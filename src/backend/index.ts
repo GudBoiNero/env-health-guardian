@@ -66,7 +66,7 @@ export async function analyzeEnvironment(
             weatherData
         )} and the user's profile: ${JSON.stringify(
             userProfile
-        )}, analyze potential health risks and provide recommendations.`;
+        )}, analyze potential health risks worth mentioning and provide recommendations for the user if an environmental health risk is indentified.`;
 
         const gptResponse = await axios.post(
             "https://api.openai.com/v1/chat/completions",
