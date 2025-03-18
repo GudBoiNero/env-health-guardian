@@ -40,7 +40,6 @@ export async function fetchLocation(): Promise<any> {
 export async function fetchWeatherData(): Promise<any> {
     try {
         const location = await fetchLocation()
-        console.log(location)
         const response = await axios.get(
             `https://api.weatherapi.com/v1/current.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${location.lat},${location.lon}`
         );
