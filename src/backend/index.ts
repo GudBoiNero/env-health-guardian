@@ -1,6 +1,6 @@
 import axios from "axios";
 
-type UserProfile = {
+export type UserProfile = {
     age: number;
     gender: string;
     conditions: string[];
