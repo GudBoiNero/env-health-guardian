@@ -8,6 +8,7 @@ import DynamicTextAreaList from './DynamicTextAreaList'
 import Item from 'antd/es/list/Item'
 import WeatherDashboard from './WeatherDashboard'
 import Title from 'antd/es/typography/Title'
+import MarkdownParser from './MarkdownParser'
 
 function App() {
   const [form] = Form.useForm(); // Use Ant Design's form instance
@@ -100,13 +101,10 @@ function App() {
       }
 
       <Layout style={layoutStyle}>
-        <Input.TextArea
-          value={(
-            state != undefined ? state : response?.recommendations
-          )}
-          contentEditable={false}
-          autoSize={{ minRows: 10 }}
-        />
+        {(
+          state != undefined ? state :
+            <Card style={contentStyle}><MarkdownParser value={response?.recommendations} /></Card>
+        )}
       </Layout>
     </>
   )
