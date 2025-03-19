@@ -55,6 +55,39 @@ type EnvironmentAnalysisResult = {
     recommendations: string;
   };
 
+  /**
+ * Fetches air quality data for the given coordinates.
+ * @param lat - Latitude
+ * @param lon - Longitude
+ * @returns A promise resolving to the air quality data.
+ */
+export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
+    try {
+      const response = await axios({
+        method: 'post',
+        url: `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
+        data: {
+          location: {
+            latitude: lat,
+            longitude: lon
+          },
+          extraComputations: ["HEALTH_RECOMMENDATIONS"]
+        }
+      });
+      return response.data;
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.error("Air quality API error:", {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
+        } else {
+          console.error("Unexpected error:", error);
+        }
+        throw new Error("Error fetching air quality data");
+      }
+  }
 export async function analyzeEnvironment(
     userProfile: UserProfile
   ): Promise<EnvironmentAnalysisResult> {
@@ -98,36 +131,3 @@ export async function analyzeEnvironment(
     }
   }
 
-/**
- * Fetches air quality data for the given coordinates.
- * @param lat - Latitude
- * @param lon - Longitude
- * @returns A promise resolving to the air quality data.
- */
-export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
-    try {
-      const response = await axios({
-        method: 'post',
-        url: `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
-        data: {
-          location: {
-            latitude: lat,
-            longitude: lon
-          },
-          extraComputations: ["HEALTH_RECOMMENDATIONS"]
-        }
-      });
-      return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error("Air quality API error:", {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status
-          });
-        } else {
-          console.error("Unexpected error:", error);
-        }
-        throw new Error("Error fetching air quality data");
-      }
-  }
