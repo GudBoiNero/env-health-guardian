@@ -61,7 +61,7 @@ type EnvironmentAnalysisResult = {
  * @param lon - Longitude
  * @returns A promise resolving to the air quality data.
  */
-export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
+  export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
     try {
       const response = await axios({
         method: 'post',
@@ -74,19 +74,34 @@ export async function fetchAirQualityData(lat: number, lon: number): Promise<any
           extraComputations: ["HEALTH_RECOMMENDATIONS"]
         }
       });
-      return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-          console.error("Air quality API error:", {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status
-          });
-        } else {
-          console.error("Unexpected error:", error);
-        }
-        throw new Error("Error fetching air quality data");
+      
+      // Validate the response data
+      const data = response.data;
+      if (!data) {
+        throw new Error("Air quality API returned empty data");
       }
+      
+      // Log the structure to help with debugging
+      console.log("Air quality data structure:", {
+        hasData: !!data,
+        hasIndexes: !!data.indexes,
+        hasPolluants: !!data.pollutants,
+      });
+      
+      return data;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error("Air quality API error:", {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        throw new Error(`Air quality API error: ${error.message} (Status: ${error.response?.status || 'unknown'})`);
+      } else {
+        console.error("Unexpected error:", error);
+        throw error; // Rethrow the original error to preserve details
+      }
+    }
   }
 export async function analyzeEnvironment(
     userProfile: UserProfile

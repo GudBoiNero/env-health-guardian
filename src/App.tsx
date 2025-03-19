@@ -44,11 +44,21 @@ function App() {
     }).then(location => {
       // Use the location to fetch air quality data
       return fetchAirQualityData(location.lat, location.lon);
-    }).then(airQualityData => {
+    })// In your App.tsx
+    .then(airQualityData => {
       console.log('Air quality data:', airQualityData)
       
       setState('Generating response...')
       setAirQualityData(airQualityData)
+      
+      // Check for required properties to show more informative errors
+      if (!airQualityData) {
+        console.error("Missing air quality data");
+      } else if (!airQualityData.indexes) {
+        console.error("Air quality data missing 'indexes' property");
+      } else if (!airQualityData.pollutants) {
+        console.error("Air quality data missing 'pollutants' property");
+      }
       
       // Analyze environment with both weather and air quality data
       return analyzeEnvironment(values!);

@@ -6,14 +6,31 @@ interface AirQualityProps {
 }
 
 const AirQualityDashboard: React.FC<AirQualityProps> = ({ data }) => {
-  if (!data || !data.indexes || !data.pollutants) {
-    return <div>No air quality data available</div>;
-  }
-
-  // Get AQI information
-  const aqiIndex = data.indexes.find((index: any) => index.code === "us_aqi");
-  const aqiValue = aqiIndex ? aqiIndex.aqi : "N/A";
-  const aqiCategory = aqiIndex ? aqiIndex.category : "N/A";
+    // Check each condition separately and provide specific error messages
+    if (!data) {
+      return <div>No air quality data available</div>;
+    }
+  
+    if (!data.indexes) {
+      console.warn("Air quality data missing 'indexes' property:", data);
+      return <div>Air quality index information not available</div>;
+    }
+  
+    if (!data.pollutants) {
+      console.warn("Air quality data missing 'pollutants' property:", data);
+      return <div>Air quality pollutant information not available</div>;
+    }
+  
+    // Get AQI information
+    const aqiIndex = data.indexes.find((index: any) => index.code === "us_aqi");
+    
+    if (!aqiIndex) {
+      console.warn("US AQI not found in indexes:", data.indexes);
+      return <div>US AQI information not available</div>;
+    }
+  
+    const aqiValue = aqiIndex.aqi || "N/A";
+    const aqiCategory = aqiIndex.category || "N/A";
   
   // Determine tag color based on AQI category
   const getAqiColor = (category: string) => {
