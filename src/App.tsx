@@ -3,7 +3,7 @@ import './backend/index'
 
 import { useState } from 'react'
 import { analyzeEnvironment, fetchWeatherData, UserProfile } from './backend/index'
-import { Button, Card, Form, FormProps, Input, Layout, Radio, Typography } from 'antd'
+import { Button, Card, Form, FormProps, Input, Layout, Radio, Spin, Typography } from 'antd'
 import DynamicTextAreaList from './DynamicTextAreaList'
 import Item from 'antd/es/list/Item'
 import WeatherDashboard from './WeatherDashboard'
@@ -100,12 +100,28 @@ function App() {
           </>
       }
 
-      <Layout style={layoutStyle}>
-        {(
-          state != undefined ? state :
-            <Card style={contentStyle}><MarkdownParser value={response?.recommendations} /></Card>
-        )}
-      </Layout>
+      {state == undefined
+        ? <>
+          {response == undefined
+            ? <></>
+            :
+            <Layout style={layoutStyle}>
+              <Card style={contentStyle}>
+                <Typography.Title level={3}>Recommendations</Typography.Title>
+                <MarkdownParser value={response?.recommendations} />
+              </Card>
+            </Layout>
+          }
+        </>
+        : <>
+          <Layout style={layoutStyle}>
+            <Card style={contentStyle}>
+              <Spin tip={state}>
+                <div style={{ minHeight: '50px' }}></div> {/* This is just to ensure the spinner takes up space while loading */}
+              </Spin>
+            </Card>
+          </Layout>
+        </>}
     </>
   )
 }
