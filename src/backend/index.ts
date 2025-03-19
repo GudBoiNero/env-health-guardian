@@ -49,44 +49,75 @@ export async function fetchWeatherData(): Promise<any> {
     }
 }
 
-/**
- * Generates health risk analysis and recommendations using GPT.
- * @param userProfile - The user's profile containing age, conditions, and location.
- * @param weatherData - The weather data fetched for the user's location.
- * @returns A promise resolving to GPT's analysis and recommendations.
- */
 export async function analyzeEnvironment(
     userProfile: UserProfile
-): Promise<{ weather: any; recommendations: string }> {
+  ): Promise<{ weather: any; airQuality: any; recommendations: string }> {
     try {
-        const weatherData = await fetchWeatherData();
-
-        const gptPrompt = `Given the following environmental conditions: ${JSON.stringify(
-            weatherData
-        )} and the user's profile: ${JSON.stringify(
-            userProfile
-        )}, analyze potential health risks worth mentioning and provide recommendations for the user if an environmental health risk is indentified.`;
-
-        const gptResponse = await axios.post(
-            "https://api.openai.com/v1/chat/completions",
-            {
-                model: "gpt-4o-mini",
-                messages: [{ role: "system", content: gptPrompt }],
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${import.meta.env.VITE_GPT_API_KEY}`,
-                    "Content-Type": "application/json",
-                },
-            }
-        );
-
-        return {
-            weather: weatherData,
-            recommendations: gptResponse.data.choices[0].message.content,
-        };
+      const weatherData = await fetchWeatherData();
+      const { lat, lon } = weatherData.location;
+      
+      // Fetch air quality data using the coordinates from weatherData
+      const airQualityData = await fetchAirQualityData(lat, lon);
+  
+      const gptPrompt = `Given the following environmental conditions: 
+      Weather: ${JSON.stringify(weatherData)}, 
+      Air Quality: ${JSON.stringify(airQualityData)}, 
+      and the user's profile: ${JSON.stringify(userProfile)}, 
+      analyze potential health risks worth mentioning and provide recommendations for the user. 
+      Consider both weather conditions and air quality metrics. 
+      If air quality is poor, provide specific recommendations based on pollutants present.`;
+  
+      const gptResponse = await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: "gpt-4o-mini",
+          messages: [{ role: "system", content: gptPrompt }],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_GPT_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+  
+      return {
+        weather: weatherData,
+        airQuality: airQualityData,
+        recommendations: gptResponse.data.choices[0].message.content,
+      };
     } catch (error) {
-        throw new Error("Error analyzing environment");
+      console.error("Error analyzing environment:", error);
+      throw new Error("Error analyzing environment");
     }
-}
+  }
 
+/**
+ * Fetches air quality data for the given coordinates.
+ * @param lat - Latitude
+ * @param lon - Longitude
+ * @returns A promise resolving to the air quality data.
+ */
+export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
+    try {
+      const response = await axios.get(
+        `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: {
+            location: {
+              latitude: lat,
+              longitude: lon,
+            },
+            extraComputations: ["HEALTH_RECOMMENDATIONS"],
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching air quality data:", error);
+      throw new Error("Error fetching air quality data");
+    }
+  }

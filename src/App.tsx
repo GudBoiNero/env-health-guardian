@@ -2,12 +2,20 @@ import './App.css'
 import './backend/index'
 
 import { useState } from 'react'
-import { analyzeEnvironment, fetchWeatherData, UserProfile } from './backend/index'
+import { 
+  analyzeEnvironment, 
+  fetchWeatherData, 
+  fetchAirQualityData, 
+  UserProfile 
+} from './backend/index'
 import { Button, Card, Form, FormProps, Input, Layout, Radio, Spin, Typography } from 'antd'
 import DynamicTextAreaList from './DynamicTextAreaList'
 import WeatherDashboard from './WeatherDashboard'
 import Title from 'antd/es/typography/Title'
 import MarkdownParser from './MarkdownParser'
+import AirQualityDashboard from './AIrQualityDashboard';
+
+
 
 function App() {
   const [form] = Form.useForm(); // Use Ant Design's form instance
@@ -16,27 +24,45 @@ function App() {
   const [response, setResponse] = useState<any>();
   const [loading, setLoading] = useState<boolean>(false);
   const [state, setState] = useState<string | undefined>(undefined);
+  const [airQualityData, setAirQualityData] = useState<any>();
+
 
   const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
     console.log('Success:', values);
-
+  
     setLoading(true)
     setState('Getting weather data...')
-    setUserProfile(values); // Store submitted values
+    setUserProfile(values);
     fetchWeatherData().then(data => {
       console.log('Weather data:', data)
-
-      setState('Generating response...')
+  
+      setState('Getting air quality data...')
       setWeatherData(data)
-    }).finally(() => {
-      analyzeEnvironment(values!).then(data => {
-        console.log('Response:', data)
-
-        setState(undefined)
-        setResponse(data)
-        setLoading(false)
-      })
-    })
+      
+      // Return the location for the next promise
+      return data.location;
+    }).then(location => {
+      // Use the location to fetch air quality data
+      return fetchAirQualityData(location.lat, location.lon);
+    }).then(airQualityData => {
+      console.log('Air quality data:', airQualityData)
+      
+      setState('Generating response...')
+      setAirQualityData(airQualityData)
+      
+      // Analyze environment with both weather and air quality data
+      return analyzeEnvironment(values!);
+    }).then(data => {
+      console.log('Response:', data)
+  
+      setState(undefined)
+      setResponse(data)
+      setLoading(false)
+    }).catch(error => {
+      console.error('Error:', error)
+      setState('Error: ' + error.message)
+      setLoading(false)
+    });
   };
 
   const onFinishFailed: FormProps<UserProfile>['onFinishFailed'] = (errorInfo) => {
@@ -97,6 +123,15 @@ function App() {
           :
           <>
           </>
+      }
+      {
+        airQualityData
+          ?
+          <Layout style={layoutStyle}>
+            <AirQualityDashboard data={airQualityData} />
+          </Layout>
+          :
+        <></>
       }
 
       {state == undefined
