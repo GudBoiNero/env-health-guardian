@@ -106,21 +106,17 @@ export async function analyzeEnvironment(
  */
 export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
     try {
-      const response = await axios.get(
-        `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
+      const response = await axios({
+        method: 'post',
+        url: `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
+        data: {
+          location: {
+            latitude: lat,
+            longitude: lon
           },
-          data: {
-            location: {
-              latitude: lat,
-              longitude: lon,
-            },
-            extraComputations: ["HEALTH_RECOMMENDATIONS"],
-          },
+          extraComputations: ["HEALTH_RECOMMENDATIONS"]
         }
-      );
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching air quality data:", error);
