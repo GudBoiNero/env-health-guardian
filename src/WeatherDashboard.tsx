@@ -126,7 +126,7 @@ const WeatherDashboard: React.FC<WeatherProps> = ({ data }) => {
                 </Col>
 
                 {/* Additional Data */}
-                <Col span={24} sm={12} style={{ paddingTop: '1em' }}>
+                <Col span={24} sm={12} style>
                     <Card title="Weather Details" style={{ height: "100%" }}>
                         <Descriptions column={1}>
                             <Descriptions.Item label="Pressure">{pressure_mb} mb</Descriptions.Item>
