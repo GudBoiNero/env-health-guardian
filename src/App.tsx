@@ -47,7 +47,7 @@ function App() {
     <>
       <Layout style={layoutStyle}>
         <Card style={contentStyle}>
-          <Title level={2} style={{ marginTop: 0 }}>Environment Health Risk</Title>
+          <Title level={2} style={{ marginTop: 0 }}>Environment Health Guardian</Title>
           <Typography>Welcome! Please input health-risk assessment data below! Don't worry, your data is safe.</Typography>
         </Card>
       </Layout>
