@@ -119,7 +119,15 @@ export async function fetchAirQualityData(lat: number, lon: number): Promise<any
       });
       return response.data;
     } catch (error) {
-      console.error("Error fetching air quality data:", error);
-      throw new Error("Error fetching air quality data");
-    }
+        if (axios.isAxiosError(error)) {
+          console.error("Air quality API error:", {
+            message: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
+        } else {
+          console.error("Unexpected error:", error);
+        }
+        throw new Error("Error fetching air quality data");
+      }
   }
