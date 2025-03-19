@@ -3,10 +3,11 @@ import './backend/index'
 
 import { useState } from 'react'
 import { analyzeEnvironment, fetchWeatherData, UserProfile } from './backend/index'
-import { Button, Card, Form, FormProps, Input, Layout, Radio } from 'antd'
+import { Button, Card, Form, FormProps, Input, Layout, Radio, Typography } from 'antd'
 import DynamicTextAreaList from './DynamicTextAreaList'
 import Item from 'antd/es/list/Item'
 import WeatherDashboard from './WeatherDashboard'
+import Title from 'antd/es/typography/Title'
 
 function App() {
   const [form] = Form.useForm(); // Use Ant Design's form instance
@@ -46,6 +47,12 @@ function App() {
     <>
       <Layout style={layoutStyle}>
         <Card style={contentStyle}>
+          <Title level={2} style={{ marginTop: 0 }}>Environment Health Risk</Title>
+          <Typography>Welcome! Please input health-risk assessment data below! Don't worry, your data is safe.</Typography>
+        </Card>
+      </Layout>
+      <Layout style={layoutStyle}>
+        <Card style={contentStyle}>
           <Form
             form={form}
             name='form'
@@ -81,9 +88,16 @@ function App() {
         </Card>
       </Layout>
 
-      <Layout style={layoutStyle}>
-        {weatherData ? <WeatherDashboard data={weatherData} /> : <></>}
-      </Layout>
+      {
+        weatherData
+          ?
+          <Layout style={layoutStyle}>
+            <WeatherDashboard data={weatherData} />
+          </Layout>
+          :
+          <>
+          </>
+      }
 
       <Layout style={layoutStyle}>
         <Input.TextArea
