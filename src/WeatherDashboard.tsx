@@ -73,7 +73,7 @@ const WeatherDashboard: React.FC<WeatherProps> = ({ data }) => {
 
     return (
         <div>
-            <Row gutter={16}>
+            <Row gutter={[16, 16]}>
                 {/* Location Info */}
                 <Col span={24} style={{ paddingBottom: '1em' }}>
                     <Card title={`${location.name}, ${location.region}, ${location.country}`}>
@@ -85,7 +85,7 @@ const WeatherDashboard: React.FC<WeatherProps> = ({ data }) => {
                 </Col>
 
                 {/* Weather Info */}
-                <Col span={12}>
+                <Col span={24} sm={12}>
                     <Card
                         title="Current Weather"
                         extra={<Avatar src={`//cdn.weatherapi.com/weather/64x64/day/113.png`} />}
@@ -126,7 +126,7 @@ const WeatherDashboard: React.FC<WeatherProps> = ({ data }) => {
                 </Col>
 
                 {/* Additional Data */}
-                <Col span={12}>
+                <Col span={24} sm={12} style={{ paddingTop: '1em' }}>
                     <Card title="Weather Details" style={{ height: "100%" }}>
                         <Descriptions column={1}>
                             <Descriptions.Item label="Pressure">{pressure_mb} mb</Descriptions.Item>
