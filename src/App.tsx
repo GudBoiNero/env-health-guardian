@@ -2,17 +2,39 @@ import './App.css'
 import './backend/index'
 
 import { useState } from 'react'
-import { UserProfile } from './backend/index'
+import { analyzeEnvironment, fetchWeatherData, UserProfile } from './backend/index'
 import { Button, Card, Form, FormProps, Input, Layout, Radio } from 'antd'
 import DynamicTextAreaList from './DynamicTextAreaList'
+import Item from 'antd/es/list/Item'
 
 function App() {
   const [form] = Form.useForm(); // Use Ant Design's form instance
   const [userProfile, setUserProfile] = useState<UserProfile>();
+  const [weatherData, setWeatherData] = useState<any>();
+  const [response, setResponse] = useState<any>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [state, setState] = useState<string | undefined>(undefined);
 
   const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
     console.log('Success:', values);
+
+    setLoading(true)
+    setState('Getting weather data...')
     setUserProfile(values); // Store submitted values
+    fetchWeatherData().then(data => {
+      console.log('Weather data:', data)
+
+      setState('Generating response...')
+      setWeatherData(data)
+    }).finally(() => {
+      analyzeEnvironment(values!).then(data => {
+        console.log('Response:', data)
+
+        setState(undefined)
+        setResponse(data)
+        setLoading(false)
+      })
+    })
   };
 
   const onFinishFailed: FormProps<UserProfile>['onFinishFailed'] = (errorInfo) => {
@@ -52,18 +74,20 @@ function App() {
             </Form.Item>
 
             <Form.Item>
-              <Button type='primary' htmlType='submit'>Submit</Button>
+              <Button type='primary' htmlType='submit' loading={loading}>Submit</Button>
             </Form.Item>
           </Form>
         </Card>
       </Layout>
 
       <Layout style={layoutStyle}>
-        <Card style={contentStyle}>
-          {userProfile && (
-            <p>Submitted: {JSON.stringify(userProfile)}</p>
+        <Input.TextArea
+          value={(
+            state != undefined ? state : response?.recommendations
           )}
-        </Card>
+          contentEditable={false}
+          autoSize={{ minRows: 10 }}
+        />
       </Layout>
     </>
   )
@@ -74,7 +98,8 @@ const layoutStyle: React.CSSProperties = {
   overflow: 'hidden',
   width: 'min(100%, 50em)',
   margin: 'auto',
-  marginTop: '2em'
+  marginTop: '2em',
+  marginBottom: '2em'
 };
 
 const contentStyle: React.CSSProperties = {
