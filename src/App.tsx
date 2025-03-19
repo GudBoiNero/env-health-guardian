@@ -6,6 +6,7 @@ import { analyzeEnvironment, fetchWeatherData, UserProfile } from './backend/ind
 import { Button, Card, Form, FormProps, Input, Layout, Radio } from 'antd'
 import DynamicTextAreaList from './DynamicTextAreaList'
 import Item from 'antd/es/list/Item'
+import WeatherDashboard from './WeatherDashboard'
 
 function App() {
   const [form] = Form.useForm(); // Use Ant Design's form instance
@@ -78,6 +79,10 @@ function App() {
             </Form.Item>
           </Form>
         </Card>
+      </Layout>
+
+      <Layout style={layoutStyle}>
+        {weatherData ? <WeatherDashboard data={weatherData} /> : <></>}
       </Layout>
 
       <Layout style={layoutStyle}>
