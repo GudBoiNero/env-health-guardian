@@ -49,9 +49,15 @@ export async function fetchWeatherData(): Promise<any> {
     }
 }
 
+type EnvironmentAnalysisResult = {
+    weather: any;
+    airQuality: any;
+    recommendations: string;
+  };
+
 export async function analyzeEnvironment(
     userProfile: UserProfile
-  ): Promise<{ weather: any; airQuality: any; recommendations: string }> {
+  ): Promise<EnvironmentAnalysisResult> {
     try {
       const weatherData = await fetchWeatherData();
       const { lat, lon } = weatherData.location;
