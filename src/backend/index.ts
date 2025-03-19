@@ -67,28 +67,27 @@ type EnvironmentAnalysisResult = {
         method: 'post',
         url: `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
         data: {
+          universalAqi: true,
           location: {
             latitude: lat,
             longitude: lon
           },
-          extraComputations: ["HEALTH_RECOMMENDATIONS"]
+          extraComputations: [
+            "DOMINANT_POLLUTANT_CONCENTRATION",
+            "POLLUTANT_CONCENTRATION",
+            "LOCAL_AQI",
+            "POLLUTANT_ADDITIONAL_INFO"
+          ],
+          languageCode: "en"
+        },
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
       
-      // Validate the response data
-      const data = response.data;
-      if (!data) {
-        throw new Error("Air quality API returned empty data");
-      }
+      console.log("Air quality API full response:", JSON.stringify(response.data, null, 2));
       
-      // Log the structure to help with debugging
-      console.log("Air quality data structure:", {
-        hasData: !!data,
-        hasIndexes: !!data.indexes,
-        hasPolluants: !!data.pollutants,
-      });
-      
-      return data;
+      return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         console.error("Air quality API error:", {
@@ -96,11 +95,10 @@ type EnvironmentAnalysisResult = {
           response: error.response?.data,
           status: error.response?.status
         });
-        throw new Error(`Air quality API error: ${error.message} (Status: ${error.response?.status || 'unknown'})`);
       } else {
         console.error("Unexpected error:", error);
-        throw error; // Rethrow the original error to preserve details
       }
+      throw new Error("Error fetching air quality data");
     }
   }
 export async function analyzeEnvironment(
