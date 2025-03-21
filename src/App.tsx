@@ -15,9 +15,10 @@ import { Button, Card, Form, FormProps, Input, Layout, Radio, Spin, Typography }
 import DynamicTextAreaList from './DynamicTextAreaList'
 import WeatherDashboard from './WeatherDashboard'
 import Title from 'antd/es/typography/Title'
-import MarkdownParser from './MarkdownParser'
 import AirQualityDashboard from './AIrQualityDashboard'
-import PollenDashboard from './PollenDashboard'  // Add this import
+import PollenDashboard from './PollenDashboard'  
+import EnhancedRecommendations from './EnhancedRecommendations';
+
 
 
 function App() {
@@ -172,28 +173,25 @@ function App() {
         <></>
       }
 
-      {state == undefined
-        ? <>
-          {response == undefined
-            ? <></>
-            :
-            <Layout style={layoutStyle}>
-              <Card style={contentStyle}>
-                <Typography.Title level={3}>Recommendations</Typography.Title>
-                <MarkdownParser value={response?.recommendations} />
-              </Card>
-            </Layout>
-          }
-        </>
-        : <>
-          <Layout style={layoutStyle}>
-            <Card style={contentStyle}>
-              <Spin tip={state}>
-                <div style={{ minHeight: '50px' }}></div> {/* This is just to ensure the spinner takes up space while loading */}
-              </Spin>
-            </Card>
-          </Layout>
-        </>}
+{state == undefined
+  ? <>
+    {response == undefined
+      ? <></>
+      :
+      <Layout style={layoutStyle}>
+        <EnhancedRecommendations data={response} />
+      </Layout>
+    }
+  </>
+  : <>
+    <Layout style={layoutStyle}>
+      <Card style={contentStyle}>
+        <Spin tip={state}>
+          <div style={{ minHeight: '50px' }}></div> {/* This is just to ensure the spinner takes up space while loading */}
+        </Spin>
+      </Card>
+    </Layout>
+  </>}
     </>
   )
 }

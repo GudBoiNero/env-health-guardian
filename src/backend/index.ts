@@ -1,4 +1,6 @@
 import axios from "axios";
+import { RecommendationCategory, AllergyRecommendation, ConditionRecommendation } from './gptHelper';
+import { callGPTAPI, GPTResponse } from './gptHelper';
 
 export type UserProfile = {
     age: number;
@@ -94,12 +96,21 @@ export async function fetchWeatherData(): Promise<any> {
     }
 }
 
-type EnvironmentAnalysisResult = {
-    weather: any;
-    airQuality: any;
-    pollen: any;  // Add this field
-    recommendations: string;
+export type EnvironmentAnalysisResult = {
+  weather: any;
+  airQuality: any;
+  pollen: any;
+  recommendations: string;
+  riskLevel?: string;
+  summary?: string;
+  categories?: RecommendationCategory[];
+  allergyRecommendations?: AllergyRecommendation[];
+  conditionRecommendations?: ConditionRecommendation[];
+  error?: {
+    message: string;
+    code: string;
   };
+};
 
   /**
  * Fetches air quality data for the given coordinates.
@@ -147,57 +158,98 @@ type EnvironmentAnalysisResult = {
       throw new Error("Error fetching air quality data");
     }
   }
-  export async function analyzeEnvironment(
-    userProfile: UserProfile
-  ): Promise<EnvironmentAnalysisResult> {
-    try {
-      const weatherData = await fetchWeatherData();
-      const { lat, lon } = weatherData.location;
-      
-      // Fetch air quality data using the coordinates from weatherData
-      const airQualityData = await fetchAirQualityData(lat, lon);
-      
-      // Fetch pollen data using the same coordinates
-      const pollenData = await fetchPollenData(lat, lon, 1);
+  /**
+ * Analyzes environmental data and provides health recommendations
+ * @param userProfile User profile information
+ * @returns Analysis result with recommendations
+ */
   
-      const gptPrompt = `Given the following environmental conditions: 
-      Weather: ${JSON.stringify(weatherData)}, 
-      Air Quality: ${JSON.stringify(airQualityData)},
-      Pollen Data: ${JSON.stringify(pollenData)}, 
-      and the user's profile: ${JSON.stringify(userProfile)}, 
-      analyze potential health risks worth mentioning and provide recommendations for the user. 
-      
-      Consider all three environmental factors: weather conditions, air quality metrics, and pollen levels.
-      
-      If air quality is poor, provide specific recommendations based on pollutants present.
-      
-      If pollen levels are high, provide recommendations for allergy sufferers, particularly if the user has noted allergies.
-      
-      Format your recommendations in markdown with clear headings for different categories of advice.`;
-  
-      const gptResponse = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-4o-mini",
-          messages: [{ role: "system", content: gptPrompt }],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_GPT_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-  
-      return {
-        weather: weatherData,
-        airQuality: airQualityData,
-        pollen: pollenData,  // Add pollen data to the result
-        recommendations: gptResponse.data.choices[0].message.content,
-      };
-    } catch (error) {
-      console.error("Error analyzing environment:", error);
-      throw new Error("Error analyzing environment");
-    }
-  }
+ // Updated analyzeEnvironment function with null checking
 
+/**
+ * Analyzes environmental data and provides health recommendations
+ * @param userProfile User profile information
+ * @returns Analysis result with recommendations
+ */
+export async function analyzeEnvironment(
+  userProfile: UserProfile
+): Promise<EnvironmentAnalysisResult> {
+  try {
+    const weatherData = await fetchWeatherData();
+    const { lat, lon } = weatherData.location;
+    
+    // Fetch air quality data using the coordinates from weatherData
+    const airQualityData = await fetchAirQualityData(lat, lon);
+    
+    // Fetch pollen data using the same coordinates
+    const pollenData = await fetchPollenData(lat, lon, 1);
+
+    // Safe access to user profile data with fallbacks for null/undefined values
+    const userAge = userProfile?.age || 'Not specified';
+    const userGender = userProfile?.gender || 'Not specified';
+    const userAllergies = userProfile?.allergies && userProfile.allergies.length > 0 
+      ? userProfile.allergies.join(', ') 
+      : 'None listed';
+    const userConditions = userProfile?.conditions && userProfile.conditions.length > 0 
+      ? userProfile.conditions.join(', ') 
+      : 'None listed';
+
+    // Create a more detailed and instructive prompt
+    const gptPrompt = `Given the following environmental conditions: 
+    Weather: ${JSON.stringify(weatherData)}, 
+    Air Quality: ${JSON.stringify(airQualityData)},
+    Pollen Data: ${JSON.stringify(pollenData)}, 
+    and the user's profile: ${JSON.stringify(userProfile)}, 
+    analyze potential health risks and provide recommendations.
+    
+    User Profile Details:
+    - Age: ${userAge}
+    - Gender: ${userGender}
+    - Allergies: ${userAllergies}
+    - Medical Conditions: ${userConditions}
+    
+    Please provide:
+    1. General environmental health recommendations based on weather, air quality, and pollen levels
+    2. Specific recommendations for EACH allergy the user has listed
+    3. Specific recommendations for EACH medical condition the user has listed
+    
+    Consider all risk factors:
+    - Weather conditions (temperature, humidity, UV index, etc.)
+    - Air quality metrics (pollutant levels, AQI category)
+    - Pollen levels (types, intensity, seasonality)
+    
+    For each allergy and condition, provide targeted advice considering the current environmental conditions and assign a specific risk level.`;
+
+    // Use the standardized GPT API helper
+    const gptResponse: GPTResponse = await callGPTAPI(gptPrompt);
+
+    if (!gptResponse.success) {
+      throw new Error(gptResponse.error?.message || "Error analyzing environment");
+    }
+
+    return {
+      weather: weatherData,
+      airQuality: airQualityData,
+      pollen: pollenData,
+      recommendations: gptResponse.data?.recommendations || "No recommendations available",
+      riskLevel: gptResponse.data?.riskLevel,
+      summary: gptResponse.data?.summary,
+      categories: gptResponse.data?.categories,
+      allergyRecommendations: gptResponse.data?.allergyRecommendations || [],
+      conditionRecommendations: gptResponse.data?.conditionRecommendations || []
+    };
+  } catch (error) {
+    console.error("Error analyzing environment:", error);
+    
+    return {
+      weather: null,
+      airQuality: null,
+      pollen: null,
+      recommendations: "An error occurred while analyzing environmental data.",
+      error: {
+        message: error instanceof Error ? error.message : "Unknown error occurred",
+        code: "ANALYSIS_ERROR"
+      }
+    };
+  }
+}
