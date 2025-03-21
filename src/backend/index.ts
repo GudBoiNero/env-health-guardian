@@ -195,31 +195,33 @@ export async function analyzeEnvironment(
       : 'None listed';
 
     // Create a more detailed and instructive prompt
-    const gptPrompt = `Given the following environmental conditions: 
-    Weather: ${JSON.stringify(weatherData)}, 
-    Air Quality: ${JSON.stringify(airQualityData)},
-    Pollen Data: ${JSON.stringify(pollenData)}, 
-    and the user's profile: ${JSON.stringify(userProfile)}, 
-    analyze potential health risks and provide recommendations.
-    
-    User Profile Details:
-    - Age: ${userAge}
-    - Gender: ${userGender}
-    - Allergies: ${userAllergies}
-    - Medical Conditions: ${userConditions}
-    
-    Please provide:
-    1. General environmental health recommendations based on weather, air quality, and pollen levels
-    2. Specific recommendations for EACH allergy the user has listed
-    3. Specific recommendations for EACH medical condition the user has listed
-    
-    Consider all risk factors:
-    - Weather conditions (temperature, humidity, UV index, etc.)
-    - Air quality metrics (pollutant levels, AQI category)
-    - Pollen levels (types, intensity, seasonality)
-    
-    For each allergy and condition, provide targeted advice considering the current environmental conditions and assign a specific risk level.`;
+    // Enhanced prompt in analyzeEnvironment function in src/backend/index.ts
+const gptPrompt = `Given the following environmental conditions: 
+Weather: ${JSON.stringify(weatherData)}, 
+Air Quality: ${JSON.stringify(airQualityData)},
+Pollen Data: ${JSON.stringify(pollenData)}, 
+and the user's profile: ${JSON.stringify(userProfile)}, 
+analyze potential health risks and provide highly personalized recommendations.
 
+User Profile Details:
+- Age: ${userAge}
+- Gender: ${userGender}
+- Allergies: ${userAllergies}
+- Medical Conditions: ${userConditions}
+
+Please provide:
+1. General environmental health recommendations based on weather, air quality, and pollen levels
+2. PERSONALIZED recommendations for EACH specific allergy the user has listed (using their exact terminology)
+3. PERSONALIZED recommendations for EACH specific medical condition the user has listed (using their exact terminology)
+
+Consider all risk factors:
+- Weather conditions (temperature, humidity, UV index, etc.)
+- Air quality metrics (pollutant levels, AQI category)
+- Pollen levels (types, intensity, seasonality)
+
+For each allergy and condition, provide highly specific, tailored advice considering the current environmental conditions and assign a specific risk level. Focus on how the current environmental conditions specifically impact their exact allergies and conditions.
+
+If the user lists "Pollen" as an allergy, provide specific recommendations based on the current pollen types and levels in their area. If they list a condition like "Eczema", provide recommendations specific to managing eczema in the current weather, air quality and pollen conditions.`;
     // Use the standardized GPT API helper
     const gptResponse: GPTResponse = await callGPTAPI(gptPrompt);
 

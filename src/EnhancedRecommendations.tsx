@@ -1,5 +1,4 @@
-// src/EnhancedRecommendations.tsx
-
+// Updated EnhancedRecommendations.tsx component
 import React from 'react';
 import { Card, Tag, Typography, Divider, List, Row, Col, Alert } from 'antd';
 import MarkdownParser from './MarkdownParser';
@@ -52,7 +51,7 @@ const EnhancedRecommendations: React.FC<EnhancedRecommendationsProps> = ({ data 
 
   return (
     <Card>
-      <Title level={3}>Health Recommendations</Title>
+      <Title level={3}>Personalized Health Recommendations</Title>
       
       {data.riskLevel && (
         <div style={{ marginBottom: 16 }}>
@@ -76,10 +75,10 @@ const EnhancedRecommendations: React.FC<EnhancedRecommendationsProps> = ({ data 
       {/* If we have structured data, display it in organized sections */}
       {hasStructuredData ? (
         <>
-          {/* Environmental Categories */}
+          {/* Environmental Categories - keep these but with a different heading */}
           {data.categories && data.categories.length > 0 && (
             <>
-              <Title level={4}>Environmental Factors</Title>
+              <Title level={4}>General Environmental Considerations</Title>
               {data.categories.map((category, index) => (
                 <div key={`category-${index}`} style={{ marginBottom: 16 }}>
                   <Title level={5}>{category.name}</Title>
@@ -97,10 +96,10 @@ const EnhancedRecommendations: React.FC<EnhancedRecommendationsProps> = ({ data 
             </>
           )}
           
-          {/* Allergy Recommendations */}
+          {/* Allergy Recommendations - use specific allergy names in headers */}
           {hasAllergies && (
             <>
-              <Title level={4}>Allergy Management</Title>
+              <Title level={4}>Your Allergy Management</Title>
               <Row gutter={[16, 16]}>
                 {data.allergyRecommendations!.map((allergy, index) => (
                   <Col xs={24} md={12} key={`allergy-${index}`}>
@@ -108,9 +107,9 @@ const EnhancedRecommendations: React.FC<EnhancedRecommendationsProps> = ({ data 
                       type="inner" 
                       title={
                         <span>
-                          {allergy.allergy}{' '}
+                          Managing {allergy.allergy}{' '}
                           <Tag color={getRiskColor(allergy.riskLevel)}>
-                            {allergy.riskLevel.toUpperCase()}
+                            {allergy.riskLevel.toUpperCase()} RISK
                           </Tag>
                         </span>
                       }
@@ -132,10 +131,10 @@ const EnhancedRecommendations: React.FC<EnhancedRecommendationsProps> = ({ data 
             </>
           )}
           
-          {/* Medical Condition Recommendations */}
+          {/* Medical Condition Recommendations - use specific condition names in headers */}
           {hasConditions && (
             <>
-              <Title level={4}>Medical Condition Management</Title>
+              <Title level={4}>Your Health Condition Management</Title>
               <Row gutter={[16, 16]}>
                 {data.conditionRecommendations!.map((condition, index) => (
                   <Col xs={24} md={12} key={`condition-${index}`}>
@@ -143,9 +142,9 @@ const EnhancedRecommendations: React.FC<EnhancedRecommendationsProps> = ({ data 
                       type="inner" 
                       title={
                         <span>
-                          {condition.condition}{' '}
+                          {condition.condition} Management{' '}
                           <Tag color={getRiskColor(condition.riskLevel)}>
-                            {condition.riskLevel.toUpperCase()}
+                            {condition.riskLevel.toUpperCase()} RISK
                           </Tag>
                         </span>
                       }

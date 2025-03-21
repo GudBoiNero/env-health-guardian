@@ -51,30 +51,33 @@ export interface ConditionRecommendation {
 export async function callGPTAPI(prompt: string): Promise<GPTResponse> {
   try {
     // Create a system message with instructions for structured output
-    const structuredPrompt = `
-      ${prompt}
-      
-      Please structure your response in JSON format with the following fields:
-      - summary: A brief summary of the environmental health assessment
-      - riskLevel: An overall risk assessment (low, moderate, high, or very_high)
-      - categories: An array of recommendation categories for environmental factors, each with:
-        - name: Category name (e.g., "Weather Precautions", "Air Quality", "Pollen Allergies")
-        - items: Array of specific recommendations as strings
-      
-      Additionally, specifically address each allergy and condition the user has mentioned:
-      
-      - allergyRecommendations: An array of recommendations for each allergy listed by the user, with:
-        - allergy: The specific allergy (e.g., "Pollen", "Dust", "Pet Dander")
-        - recommendations: Array of specific recommendations for managing this allergy in current conditions
-        - riskLevel: Risk level specific to this allergy in current conditions (low, moderate, high, or very_high)
-      
-      - conditionRecommendations: An array of recommendations for each medical condition listed by the user, with:
-        - condition: The specific condition (e.g., "Asthma", "COPD", "Heart Disease")
-        - recommendations: Array of specific recommendations for managing this condition in current conditions
-        - riskLevel: Risk level specific to this condition in current conditions (low, moderate, high, or very_high)
+    // Update to the structured prompt in src/backend/gptHelper.ts
+const structuredPrompt = `
+${prompt}
 
-      The JSON should be valid and parseable. If the user has not listed any allergies or conditions, include empty arrays for those fields.
-    `;
+Please structure your response in JSON format with the following fields:
+- summary: A brief summary of the environmental health assessment specific to this user's needs
+- riskLevel: An overall risk assessment (low, moderate, high, or very_high)
+- categories: An array of recommendation categories for general environmental factors, each with:
+  - name: Category name (e.g., "Weather Precautions", "Air Quality", "UV Protection")
+  - items: Array of specific recommendations as strings
+
+Most importantly, provide highly personalized recommendations for each specific allergy and condition:
+
+- allergyRecommendations: An array of recommendations for EACH allergy listed by the user, with:
+  - allergy: The specific allergy exactly as listed by the user (e.g., "Pollen", "Dust", "Pet Dander")
+  - recommendations: Array of detailed, tailored recommendations for managing this allergy in current conditions
+  - riskLevel: Risk level specific to this allergy in current conditions (low, moderate, high, or very_high)
+
+- conditionRecommendations: An array of recommendations for EACH medical condition listed by the user, with:
+  - condition: The specific condition exactly as listed by the user (e.g., "Asthma", "Eczema", "COPD")
+  - recommendations: Array of detailed, tailored recommendations for managing this condition in current conditions
+  - riskLevel: Risk level specific to this condition in current conditions (low, moderate, high, or very_high)
+
+The JSON should be valid and parseable. If the user has not listed any allergies or conditions, include empty arrays for those fields.
+
+Importantly, use the exact terminology the user provided for their allergies and conditions, and make the recommendations highly specific to those exact issues.
+`;
 
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
