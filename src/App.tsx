@@ -1,3 +1,5 @@
+// Modified sections of App.tsx to include pollen data
+
 import './App.css'
 import './backend/index'
 
@@ -5,7 +7,8 @@ import { useState } from 'react'
 import { 
   analyzeEnvironment, 
   fetchWeatherData, 
-  fetchAirQualityData, 
+  fetchAirQualityData,
+  fetchPollenData,  // Add this import
   UserProfile 
 } from './backend/index'
 import { Button, Card, Form, FormProps, Input, Layout, Radio, Spin, Typography } from 'antd'
@@ -13,8 +16,8 @@ import DynamicTextAreaList from './DynamicTextAreaList'
 import WeatherDashboard from './WeatherDashboard'
 import Title from 'antd/es/typography/Title'
 import MarkdownParser from './MarkdownParser'
-import AirQualityDashboard from './AIrQualityDashboard';
-
+import AirQualityDashboard from './AIrQualityDashboard'
+import PollenDashboard from './PollenDashboard'  // Add this import
 
 
 function App() {
@@ -25,6 +28,7 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [state, setState] = useState<string | undefined>(undefined);
   const [airQualityData, setAirQualityData] = useState<any>();
+  const [pollenData, setPollenData] = useState<any>();  // Add this state variable
 
 
   const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
@@ -43,26 +47,41 @@ function App() {
       return data.location;
     }).then(location => {
       // Use the location to fetch air quality data
-      return fetchAirQualityData(location.lat, location.lon);
-    })// In your App.tsx
-    .then(airQualityData => {
-      console.log('Air quality data:', airQualityData)
-      
-      setState('Generating response...')
-      setAirQualityData(airQualityData)
-      
-      // Check for required properties to show more informative errors
-      if (!airQualityData) {
-        console.error("Missing air quality data");
-      } else if (!airQualityData.indexes) {
-        console.error("Air quality data missing 'indexes' property");
-      } else if (!airQualityData.pollutants) {
-        console.error("Air quality data missing 'pollutants' property");
-      }
-      
-      // Analyze environment with both weather and air quality data
-      return analyzeEnvironment(values!);
-    }).then(data => {
+      return fetchAirQualityData(location.lat, location.lon).then(airQualityData => {
+        console.log('Air quality data:', airQualityData)
+        
+        setState('Getting pollen data...')  // Add this state update
+        setAirQualityData(airQualityData)
+        
+        // Check for required properties to show more informative errors
+        if (!airQualityData) {
+          console.error("Missing air quality data");
+        } else if (!airQualityData.indexes) {
+          console.error("Air quality data missing 'indexes' property");
+        } else if (!airQualityData.pollutants) {
+          console.error("Air quality data missing 'pollutants' property");
+        }
+        
+        // Return the location for the next promise
+        return location;
+      });
+    })
+    .then(location => {
+      // Fetch pollen data with the same location
+      return fetchPollenData(location.lat, location.lon, 1).then(pollenData => {
+        console.log('Pollen data:', pollenData)
+        
+        setState('Generating response...')
+        setPollenData(pollenData)
+        
+        return userProfile!;  // Return the user profile for the next promise
+      });
+    })
+    .then(userProfile => {
+      // Analyze environment with all data
+      return analyzeEnvironment(userProfile);
+    })
+    .then(data => {
       console.log('Response:', data)
   
       setState(undefined)
@@ -139,6 +158,15 @@ function App() {
           ?
           <Layout style={layoutStyle}>
             <AirQualityDashboard data={airQualityData} />
+          </Layout>
+          :
+        <></>
+      }
+      {
+        pollenData
+          ?
+          <Layout style={layoutStyle}>
+            <PollenDashboard data={pollenData} />
           </Layout>
           :
         <></>
