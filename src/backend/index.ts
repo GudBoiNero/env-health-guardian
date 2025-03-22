@@ -147,44 +147,140 @@ type EnvironmentAnalysisResult = {
       throw new Error("Error fetching air quality data");
     }
   }
-  export async function analyzeEnvironment(
-    userProfile: UserProfile
-  ): Promise<EnvironmentAnalysisResult> {
-    try {
-      // First, validate that userProfile is defined and has expected structure
-      if (!userProfile) {
-        throw new Error("User profile is undefined");
+  // Update the analyzeEnvironment function in src/backend/index.ts
+export async function analyzeEnvironment(
+  userProfile: UserProfile
+): Promise<EnvironmentAnalysisResult> {
+  try {
+    // First, validate that userProfile is defined and has expected structure
+    if (!userProfile) {
+      throw new Error("User profile is undefined");
+    }
+    
+    // Create a safely formatted profile with defaults for missing properties
+    const safeProfile = {
+      age: userProfile.age || 0,
+      gender: userProfile.gender || "unknown",
+      allergies: Array.isArray(userProfile.allergies) ? userProfile.allergies.filter(a => a && a.trim() !== "") : [],
+      conditions: Array.isArray(userProfile.conditions) ? userProfile.conditions.filter(c => c && c.trim() !== "") : []
+    };
+    
+    const weatherData = await fetchWeatherData();
+    const { lat, lon } = weatherData.location;
+    
+    // Fetch air quality data using the coordinates from weatherData
+    const airQualityData = await fetchAirQualityData(lat, lon);
+    
+    // Fetch pollen data using the same coordinates
+    const pollenData = await fetchPollenData(lat, lon, 1);
+
+    // Format specific weather info for GPT
+    const weather = {
+      location: `${weatherData.location.name}, ${weatherData.location.region}, ${weatherData.location.country}`,
+      temperature: {
+        celsius: weatherData.current.temp_c,
+        fahrenheit: weatherData.current.temp_f
+      },
+      condition: weatherData.current.condition.text,
+      humidity: weatherData.current.humidity,
+      uvIndex: weatherData.current.uv,
+      wind: {
+        speed: weatherData.current.wind_mph,
+        direction: weatherData.current.wind_dir
+      },
+      feelsLike: {
+        celsius: weatherData.current.feelslike_c,
+        fahrenheit: weatherData.current.feelslike_f
+      }
+    };
+
+    // Format air quality data for GPT
+    let airQuality = {
+      aqi: "N/A",
+      category: "N/A",
+      dominantPollutant: "N/A",
+      pollutants: []
+    };
+    
+    if (airQualityData && airQualityData.indexes && airQualityData.indexes.length > 0) {
+      // Try to get the US EPA AQI first, then fallback to Universal AQI
+      const usEpaIndex = airQualityData.indexes.find((index: any) => index.code === "usa_epa");
+      const universalIndex = airQualityData.indexes.find((index: any) => index.code === "uaqi");
+      const aqiIndex = usEpaIndex || universalIndex;
+      
+      if (aqiIndex) {
+        airQuality.aqi = aqiIndex.aqi || aqiIndex.aqiDisplay || "N/A";
+        airQuality.category = aqiIndex.category || "N/A";
+        airQuality.dominantPollutant = aqiIndex.dominantPollutant || "N/A";
       }
       
-      // Create a safely formatted profile with defaults for missing properties
-      const safeProfile = {
-        age: userProfile.age || 0,
-        gender: userProfile.gender || "unknown",
-        allergies: Array.isArray(userProfile.allergies) ? userProfile.allergies.filter(a => a && a.trim() !== "") : [],
-        conditions: Array.isArray(userProfile.conditions) ? userProfile.conditions.filter(c => c && c.trim() !== "") : []
-      };
+      if (airQualityData.pollutants && airQualityData.pollutants.length > 0) {
+        airQuality.pollutants = airQualityData.pollutants.map((p: any) => {
+          const name = p.fullName || p.displayName || p.code || "";
+          const value = p.concentration?.value;
+          const units = p.concentration?.units;
+          
+          // Format units for display
+          let formattedUnits = units;
+          if (units === "PARTS_PER_BILLION") formattedUnits = "ppb";
+          if (units === "MICROGRAMS_PER_CUBIC_METER") formattedUnits = "μg/m³";
+          
+          return {
+            name,
+            value: value !== undefined ? value : "N/A",
+            units: formattedUnits || ""
+          };
+        });
+      }
+    }
+
+    // Format pollen data for GPT
+    let pollen = {
+      region: "Unknown",
+      date: "Unknown",
+      pollenTypes: []
+    };
+    
+    if (pollenData) {
+      pollen.region = pollenData.regionCode || "Unknown";
       
-      const weatherData = await fetchWeatherData();
-      const { lat, lon } = weatherData.location;
-      
-      // Fetch air quality data using the coordinates from weatherData
-      const airQualityData = await fetchAirQualityData(lat, lon);
-      
-      // Fetch pollen data using the same coordinates
-      const pollenData = await fetchPollenData(lat, lon, 1);
-  
-      // Ensure allergies and conditions are properly formatted arrays
-      const formattedProfile = {
-        ...userProfile,
-        allergies: Array.isArray(userProfile.allergies) 
-          ? userProfile.allergies.filter(a => a && a.trim() !== "") 
-          : [],
-        conditions: Array.isArray(userProfile.conditions) 
-          ? userProfile.conditions.filter(c => c && c.trim() !== "") 
-          : []
-      };
-  
-      const gptPrompt = `Based on the environmental data and user profile, create a concise health recommendation report.
+      if (pollenData.dailyInfo && pollenData.dailyInfo.length > 0) {
+        const dailyInfo = pollenData.dailyInfo[0];
+        
+        // Format date if available
+        if (dailyInfo.date) {
+          const { year, month, day } = dailyInfo.date;
+          pollen.date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        }
+        
+        // Format pollen types
+        if (dailyInfo.pollenTypeInfo && dailyInfo.pollenTypeInfo.length > 0) {
+          pollen.pollenTypes = dailyInfo.pollenTypeInfo.map((type: any) => {
+            if (!type) return null;
+            
+            const result: any = {
+              name: type.displayName || type.code || "Unknown",
+              inSeason: type.inSeason || false,
+              index: "N/A",
+              category: "Unknown"
+            };
+            
+            if (type.indexInfo) {
+              result.index = type.indexInfo.value !== undefined ? type.indexInfo.value : "N/A";
+              result.category = type.indexInfo.category || "Unknown";
+            }
+            
+            if (type.healthRecommendations && type.healthRecommendations.length > 0) {
+              result.recommendations = type.healthRecommendations;
+            }
+            
+            return result;
+          }).filter(Boolean);
+        }
+      }
+    }
+
+    const gptPrompt = `Based on the environmental data and user profile, create a concise health recommendation report.
 
 USER PROFILE:
 - Age: ${safeProfile.age}
@@ -192,51 +288,84 @@ USER PROFILE:
 - Allergies: ${JSON.stringify(safeProfile.allergies)}
 - Medical Conditions: ${JSON.stringify(safeProfile.conditions)}
 
+CURRENT WEATHER:
+- Location: ${weather.location}
+- Temperature: ${weather.temperature.celsius}°C / ${weather.temperature.fahrenheit}°F
+- Condition: ${weather.condition}
+- Humidity: ${weather.humidity}%
+- UV Index: ${weather.uvIndex}
+- Wind: ${weather.wind.speed} mph (${weather.wind.direction})
+- Feels Like: ${weather.feelsLike.celsius}°C / ${weather.feelsLike.fahrenheit}°F
+
+AIR QUALITY:
+- Air Quality Index (AQI): ${airQuality.aqi}
+- Category: ${airQuality.category}
+- Dominant Pollutant: ${airQuality.dominantPollutant}
+- Pollutant Levels:
+${airQuality.pollutants.map((p: any) => `  * ${p.name}: ${p.value} ${p.units}`).join('\n')}
+
+POLLEN:
+- Region: ${pollen.region}
+- Date: ${pollen.date}
+- Pollen Types:
+${pollen.pollenTypes.map((p: any) => {
+  let result = `  * ${p.name}: ${p.category} (${p.index})${p.inSeason ? ' - In Season' : ''}`;
+  if (p.recommendations && p.recommendations.length > 0) {
+    result += `\n    Recommendations: ${p.recommendations.join(', ')}`;
+  }
+  return result;
+}).join('\n')}
+
 FOCUS AREAS:
 1. Start with a brief, one-sentence acknowledgment of the user's allergies and conditions
-2. Follow up by restating each environmental factor provided
-3. Provide a very brief environmental summary (1-2 sentences only)
-4. Focus primarily on risk assesments of the user's specific allergies and conditions given the current environment and judge each to be either high, medium, or low risk
-5. Prioritize specific recommendations over general information
-6. Avoid repeating information
-7. Format in markdown with clear, concise headings
+2. Provide a very brief environmental summary (1-2 sentences only)
+3. Focus primarily on risk assessments of the user's specific allergies and conditions given the current environment and judge each to be either high, medium, or low risk
+4. Prioritize specific recommendations over general information
+5. Avoid repeating information
+6. Format in markdown with clear, concise headings
 
-Remember that the primary value is in specific, personalized solutions for managing allergies and conditions in the current environmental context.`;
-      console.log("Sending to GPT:", formattedProfile); // Debug log
-  
-      const gptResponse = await axios.post(
-        "https://api.openai.com/v1/chat/completions",
-        {
-          model: "gpt-4o",
-          messages: [{ role: "system", content: gptPrompt }],
+Remember that the primary value is in specific, personalized recommendations for managing allergies and conditions in the current environmental context, based on the precise weather, air quality, and pollen data provided.`;
+
+    console.log("Sending to GPT:", {
+      profile: safeProfile,
+      weather: weather,
+      airQuality: airQuality,
+      pollen: pollen
+    }); // Debug log
+
+    const gptResponse = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: "gpt-4o",
+        messages: [{ role: "system", content: gptPrompt }],
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_GPT_API_KEY}`,
+          "Content-Type": "application/json",
         },
-        {
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_GPT_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-  
-      return {
-        weather: weatherData,
-        airQuality: airQualityData,
-        pollen: pollenData,
-        recommendations: gptResponse.data.choices[0].message.content,
-      };
-    } catch (error: unknown) {
-      // Proper error handling with unknown type
-      let errorMessage = "Unknown error";
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      } else if (error && typeof error === 'object' && 'message' in error) {
-        errorMessage = String(error.message);
       }
-      
-      console.error("Error analyzing environment:", error);
-      throw new Error(`Error analyzing environment: ${errorMessage}`);
+    );
+
+    return {
+      weather: weatherData,
+      airQuality: airQualityData,
+      pollen: pollenData,
+      recommendations: gptResponse.data.choices[0].message.content,
+    };
+  } catch (error: unknown) {
+    // Proper error handling with unknown type
+    let errorMessage = "Unknown error";
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String(error.message);
     }
+    
+    console.error("Error analyzing environment:", error);
+    throw new Error(`Error analyzing environment: ${errorMessage}`);
   }
+}
