@@ -144,12 +144,12 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
             </Form.Item>
 
             <Form.Item label='Allergies' name='allergies'>
-              <DynamicTextAreaList value={userProfile?.allergies} />
-            </Form.Item>
+  <DynamicTextAreaList value={userProfile?.allergies} fieldType="allergy" />
+</Form.Item>
 
-            <Form.Item label='Conditions' name='conditions'>
-              <DynamicTextAreaList value={userProfile?.conditions} />
-            </Form.Item>
+<Form.Item label='Medical Conditions' name='conditions'>
+  <DynamicTextAreaList value={userProfile?.conditions} fieldType="condition" />
+</Form.Item>
             
             {/* Location Input Component */}
             <LocationInput form={form} />
@@ -219,6 +219,8 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
     </>
   )
 }
+
+
 
 const layoutStyle: React.CSSProperties = {
   borderRadius: 20,
