@@ -85,3 +85,67 @@
   .secondary-text {
     color: var(--bg-secondary);
   }
+  /* Custom styling for Steps component */
+.ant-steps .ant-steps-item-process .ant-steps-item-icon {
+  background-color: var(--bg-accent) !important; /* Crimson color */
+  border-color: var(--bg-accent) !important;
+}
+
+.ant-steps .ant-steps-item-finish .ant-steps-item-icon {
+  border-color: var(--bg-accent) !important;
+}
+
+.ant-steps .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
+  color: var(--bg-accent) !important;
+}
+
+.ant-steps .ant-steps-item-finish::after,
+.ant-steps .ant-steps-item-process::after {
+  background-color: var(--bg-accent) !important;
+}
+
+.ant-steps .ant-steps-item-finish .ant-steps-item-container .ant-steps-item-content .ant-steps-item-title::after {
+  background-color: var(--bg-accent) !important;
+}
+
+/* Custom styling for Steps component - add to your App.css file */
+
+/* Change the icon fill color to crimson and remove circle */
+.ant-steps .ant-steps-item-process .ant-steps-item-icon {
+  background-color: transparent !important; /* Remove background */
+  border-color: transparent !important; /* Remove border */
+}
+
+/* Make the active icon crimson */
+.ant-steps .ant-steps-item-process .ant-steps-item-icon > .ant-steps-icon {
+  color: var(--bg-accent) !important; /* Crimson color */
+}
+
+/* Make inactive icons gray */
+.ant-steps .ant-steps-item-wait .ant-steps-item-icon > .ant-steps-icon {
+  color: #D9D9D9 !important; 
+}
+
+/* Make completed icons crimson */
+.ant-steps .ant-steps-item-finish .ant-steps-item-icon > .ant-steps-icon {
+  color: var(--bg-accent) !important;
+}
+
+/* Make the connecting lines crimson */
+.ant-steps .ant-steps-item-finish::after {
+  background-color: var(--bg-accent) !important;
+}
+
+.ant-steps .ant-steps-item-finish .ant-steps-item-container .ant-steps-item-content .ant-steps-item-title::after {
+  background-color: var(--bg-accent) !important;
+}
+
+/* Increase size of icons */
+.ant-steps .ant-steps-item-icon {
+  font-size: 24px;
+}
+
+/* Override specific icon styling */
+.ant-steps .ant-steps-item-icon .anticon {
+  font-size: 22px;
+}
