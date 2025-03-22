@@ -10,3 +10,5 @@
 
 -   weatherapi.com
 -   chatgpt.com
+-   cloud.google.com/apis
+-     Air Quality, Pollen Count
