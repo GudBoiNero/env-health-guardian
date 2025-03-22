@@ -151,6 +151,19 @@ type EnvironmentAnalysisResult = {
     userProfile: UserProfile
   ): Promise<EnvironmentAnalysisResult> {
     try {
+      // First, validate that userProfile is defined and has expected structure
+      if (!userProfile) {
+        throw new Error("User profile is undefined");
+      }
+      
+      // Create a safely formatted profile with defaults for missing properties
+      const safeProfile = {
+        age: userProfile.age || 0,
+        gender: userProfile.gender || "unknown",
+        allergies: Array.isArray(userProfile.allergies) ? userProfile.allergies.filter(a => a && a.trim() !== "") : [],
+        conditions: Array.isArray(userProfile.conditions) ? userProfile.conditions.filter(c => c && c.trim() !== "") : []
+      };
+      
       const weatherData = await fetchWeatherData();
       const { lat, lon } = weatherData.location;
       
@@ -160,25 +173,41 @@ type EnvironmentAnalysisResult = {
       // Fetch pollen data using the same coordinates
       const pollenData = await fetchPollenData(lat, lon, 1);
   
-      const gptPrompt = `Given the following environmental conditions: 
-      Weather: ${JSON.stringify(weatherData)}, 
-      Air Quality: ${JSON.stringify(airQualityData)},
-      Pollen Data: ${JSON.stringify(pollenData)}, 
-      and the user's profile: ${JSON.stringify(userProfile)}, 
-      analyze potential health risks worth mentioning and provide recommendations for the user. 
-      
-      Consider all three environmental factors: weather conditions, air quality metrics, and pollen levels.
-      
-      If air quality is poor, provide specific recommendations based on pollutants present.
-      
-      If pollen levels are high, provide recommendations for allergy sufferers, particularly if the user has noted allergies.
-      
-      Format your recommendations in markdown with clear headings for different categories of advice.`;
+      // Ensure allergies and conditions are properly formatted arrays
+      const formattedProfile = {
+        ...userProfile,
+        allergies: Array.isArray(userProfile.allergies) 
+          ? userProfile.allergies.filter(a => a && a.trim() !== "") 
+          : [],
+        conditions: Array.isArray(userProfile.conditions) 
+          ? userProfile.conditions.filter(c => c && c.trim() !== "") 
+          : []
+      };
+  
+      const gptPrompt = `Based on the environmental data and user profile, create a concise health recommendation report.
+
+USER PROFILE:
+- Age: ${safeProfile.age}
+- Gender: ${safeProfile.gender}
+- Allergies: ${JSON.stringify(safeProfile.allergies)}
+- Medical Conditions: ${JSON.stringify(safeProfile.conditions)}
+
+FOCUS AREAS:
+1. Start with a brief, one-sentence acknowledgment of the user's allergies and conditions
+2. Follow up by restating each environmental factor provided
+3. Provide a very brief environmental summary (1-2 sentences only)
+4. Focus primarily on risk assesments of the user's specific allergies and conditions given the current environment and judge each to be either high, medium, or low risk
+5. Prioritize specific recommendations over general information
+6. Avoid repeating information
+7. Format in markdown with clear, concise headings
+
+Remember that the primary value is in specific, personalized solutions for managing allergies and conditions in the current environmental context.`;
+      console.log("Sending to GPT:", formattedProfile); // Debug log
   
       const gptResponse = await axios.post(
         "https://api.openai.com/v1/chat/completions",
         {
-          model: "gpt-4o-mini",
+          model: "gpt-4o",
           messages: [{ role: "system", content: gptPrompt }],
         },
         {
@@ -192,12 +221,22 @@ type EnvironmentAnalysisResult = {
       return {
         weather: weatherData,
         airQuality: airQualityData,
-        pollen: pollenData,  // Add pollen data to the result
+        pollen: pollenData,
         recommendations: gptResponse.data.choices[0].message.content,
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      // Proper error handling with unknown type
+      let errorMessage = "Unknown error";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage = String(error.message);
+      }
+      
       console.error("Error analyzing environment:", error);
-      throw new Error("Error analyzing environment");
+      throw new Error(`Error analyzing environment: ${errorMessage}`);
     }
   }
-

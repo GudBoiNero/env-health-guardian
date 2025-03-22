@@ -7,10 +7,12 @@ interface Props {
 }
 
 export default function DynamicTextAreaList({ value = [""], onChange }: Props) {
+  // Make sure the values are properly passed as an array
   const handleChange = (index: number, newValue: string) => {
     const updatedEntries = [...value];
     updatedEntries[index] = newValue;
-    onChange?.(updatedEntries);
+    // Filter out empty entries when saving to state
+    onChange?.(updatedEntries.filter(entry => entry.trim() !== ""));
   };
 
   const handleAdd = () => {

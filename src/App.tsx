@@ -21,7 +21,13 @@ import PollenDashboard from './PollenDashboard'  // Add this import
 
 
 function App() {
-  const [form] = Form.useForm(); // Use Ant Design's form instance
+  const [form] = Form.useForm();
+form.setFieldsValue({
+  age: '',
+  gender: '',
+  allergies: [''],  // Initialize as array with empty string
+  conditions: ['']  // Initialize as array with empty string
+});
   const [userProfile, setUserProfile] = useState<UserProfile>();
   const [weatherData, setWeatherData] = useState<any>();
   const [response, setResponse] = useState<any>();
@@ -31,68 +37,63 @@ function App() {
   const [pollenData, setPollenData] = useState<any>();  // Add this state variable
 
 
-  const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
-    console.log('Success:', values);
-  
-    setLoading(true)
-    setState('Getting weather data...')
-    setUserProfile(values);
-    fetchWeatherData().then(data => {
-      console.log('Weather data:', data)
-  
-      setState('Getting air quality data...')
-      setWeatherData(data)
-      
-      // Return the location for the next promise
-      return data.location;
-    }).then(location => {
-      // Use the location to fetch air quality data
-      return fetchAirQualityData(location.lat, location.lon).then(airQualityData => {
-        console.log('Air quality data:', airQualityData)
-        
-        setState('Getting pollen data...')  // Add this state update
-        setAirQualityData(airQualityData)
-        
-        // Check for required properties to show more informative errors
-        if (!airQualityData) {
-          console.error("Missing air quality data");
-        } else if (!airQualityData.indexes) {
-          console.error("Air quality data missing 'indexes' property");
-        } else if (!airQualityData.pollutants) {
-          console.error("Air quality data missing 'pollutants' property");
-        }
-        
-        // Return the location for the next promise
-        return location;
-      });
-    })
-    .then(location => {
-      // Fetch pollen data with the same location
-      return fetchPollenData(location.lat, location.lon, 1).then(pollenData => {
-        console.log('Pollen data:', pollenData)
-        
-        setState('Generating response...')
-        setPollenData(pollenData)
-        
-        return userProfile!;  // Return the user profile for the next promise
-      });
-    })
-    .then(userProfile => {
-      // Analyze environment with all data
-      return analyzeEnvironment(userProfile);
-    })
-    .then(data => {
-      console.log('Response:', data)
-  
-      setState(undefined)
-      setResponse(data)
-      setLoading(false)
-    }).catch(error => {
-      console.error('Error:', error)
-      setState('Error: ' + error.message)
-      setLoading(false)
-    });
+// In App.tsx
+const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
+  console.log('Success:', values);
+
+  // Make sure values has the correct structure
+  const formattedValues: UserProfile = {
+    age: Number(values.age) || 0,
+    gender: values.gender || "unknown",
+    allergies: Array.isArray(values.allergies) ? values.allergies.filter(a => a && a.trim() !== "") : [],
+    conditions: Array.isArray(values.conditions) ? values.conditions.filter(c => c && c.trim() !== "") : []
   };
+  
+  setLoading(true);
+  setState('Getting weather data...');
+  
+  // Set the user profile
+  setUserProfile(formattedValues);
+  
+  // Instead of relying on the state update, pass formattedValues directly
+  fetchWeatherData().then(data => {
+    console.log('Weather data:', data);
+    setState('Getting air quality data...');
+    setWeatherData(data);
+    return data.location;
+  }).then(location => {
+    return fetchAirQualityData(location.lat, location.lon).then(airQualityData => {
+      console.log('Air quality data:', airQualityData);
+      setState('Getting pollen data...');
+      setAirQualityData(airQualityData);
+      return location;
+    });
+  })
+  .then(location => {
+    return fetchPollenData(location.lat, location.lon, 1).then(pollenData => {
+      console.log('Pollen data:', pollenData);
+      setState('Generating response...');
+      setPollenData(pollenData);
+      
+      // Use the formattedValues directly instead of userProfile!
+      return formattedValues;
+    });
+  })
+  .then(profile => {
+    // Pass the profile directly instead of relying on userProfile state
+    return analyzeEnvironment(profile);
+  })
+  .then(data => {
+    console.log('Response:', data);
+    setState(undefined);
+    setResponse(data);
+    setLoading(false);
+  }).catch(error => {
+    console.error('Error:', error);
+    setState('Error: ' + error.message);
+    setLoading(false);
+  });
+};
 
   const onFinishFailed: FormProps<UserProfile>['onFinishFailed'] = (errorInfo) => {
     console.log('Failed:', errorInfo);
