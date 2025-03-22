@@ -280,52 +280,58 @@ export async function analyzeEnvironment(
     }
 
     // Format pollen data for GPT
-    let pollen = {
-      region: "Unknown",
-      date: "Unknown",
-      pollenTypes: []
-    };
-    
-    if (pollenData) {
-      pollen.region = pollenData.regionCode || "Unknown";
-      
-      if (pollenData.dailyInfo && pollenData.dailyInfo.length > 0) {
-        const dailyInfo = pollenData.dailyInfo[0];
-        
-        // Format date if available
-        if (dailyInfo.date) {
-          const { year, month, day } = dailyInfo.date;
-          pollen.date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        }
-        
-        // Format pollen types
-        if (dailyInfo.pollenTypeInfo && dailyInfo.pollenTypeInfo.length > 0) {
-          pollen.pollenTypes = dailyInfo.pollenTypeInfo.map((type: any) => {
-            if (!type) return null;
-            
-            const result: any = {
-              name: type.displayName || type.code || "Unknown",
-              inSeason: type.inSeason || false,
-              index: "N/A",
-              category: "Unknown"
-            };
-            
-            if (type.indexInfo) {
-              result.index = type.indexInfo.value !== undefined ? type.indexInfo.value : "N/A";
-              result.category = type.indexInfo.category || "Unknown";
-            }
-            
-            if (type.healthRecommendations && type.healthRecommendations.length > 0) {
-              result.recommendations = type.healthRecommendations;
-            }
-            
-            return result;
-          }).filter(Boolean);
-        }
-      }
-    }
+    // Updated portion of the analyzeEnvironment function
 
-    const gptPrompt = `Based on the environmental data and user profile, create a concise health recommendation report.
+// Format pollen data for GPT - with handling for unavailable data
+let pollen = {
+  region: "Unknown",
+  date: "Unknown",
+  pollenTypes: [],
+  dataAvailable: false // Flag to indicate if pollen data is available
+};
+
+if (pollenData) {
+  pollen.region = pollenData.regionCode || "Unknown";
+  
+  if (pollenData.dailyInfo && pollenData.dailyInfo.length > 0) {
+    const dailyInfo = pollenData.dailyInfo[0];
+    pollen.dataAvailable = true; // Set data available flag to true
+    
+    // Format date if available
+    if (dailyInfo.date) {
+      const { year, month, day } = dailyInfo.date;
+      pollen.date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    }
+    
+    // Format pollen types
+    if (dailyInfo.pollenTypeInfo && dailyInfo.pollenTypeInfo.length > 0) {
+      pollen.pollenTypes = dailyInfo.pollenTypeInfo.map((type: any) => {
+        if (!type) return null;
+        
+        const result: any = {
+          name: type.displayName || type.code || "Unknown",
+          inSeason: type.inSeason || false,
+          index: "N/A",
+          category: "Unknown"
+        };
+        
+        if (type.indexInfo) {
+          result.index = type.indexInfo.value !== undefined ? type.indexInfo.value : "N/A";
+          result.category = type.indexInfo.category || "Unknown";
+        }
+        
+        if (type.healthRecommendations && type.healthRecommendations.length > 0) {
+          result.recommendations = type.healthRecommendations;
+        }
+        
+        return result;
+      }).filter(Boolean);
+    }
+  }
+}
+
+// Modify the GPT prompt to handle unavailable pollen data
+const gptPrompt = `Based on the environmental data and user profile, create a concise health recommendation report.
 
 USER PROFILE:
 - Age: ${safeProfile.age}
@@ -350,7 +356,8 @@ AIR QUALITY:
 ${airQuality.pollutants.map((p: any) => `  * ${p.name}: ${p.value} ${p.units}`).join('\n')}
 
 POLLEN:
-- Region: ${pollen.region}
+${pollen.dataAvailable ? 
+`- Region: ${pollen.region}
 - Date: ${pollen.date}
 - Pollen Types:
 ${pollen.pollenTypes.map((p: any) => {
@@ -359,26 +366,31 @@ ${pollen.pollenTypes.map((p: any) => {
     result += `\n    Recommendations: ${p.recommendations.join(', ')}`;
   }
   return result;
-}).join('\n')}
+}).join('\n')}` : 
+`- Pollen data is unavailable for this location`}
 
 FOCUS AREAS:
 1. Start with a brief, one-sentence acknowledgment of the user's allergies and conditions
 2. Provide a very brief environmental summary (1-2 sentences only)
 3. For each of the user's allergies and conditions, create a separate section with:
-   - A header in the format: "### 🟢/🟡/🔴 [Allergy/Condition Name]" using:
+   - A header in the format: "### 🟢/🟡/🔴/⚪ [Allergy/Condition Name]" using:
      - 🔴 Red circle for high risk conditions
      - 🟡 Yellow circle for medium risk conditions
      - 🟢 Green circle for low risk conditions
+     - ⚪ White circle for undefined risk level (when data is unavailable)
    - Classify the risk level using colored text:
      - \`<span style="color:red">**High Risk**</span>\` 
      - \`<span style="color:#E6B800">**Medium Risk**</span>\` 
      - \`<span style="color:green">**Low Risk**</span>\`
-4. For each risk assessment, provide brief specific recommendations
-5. Avoid repeating information
-6. Format in markdown with clear, concise sections
+     - \`<span style="color:gray">**Undefined Risk**</span>\` (when data is unavailable)
+4. For pollen allergies specifically:
+   - If pollen data is unavailable, mark them as "Undefined Risk" with a white circle (⚪)
+   - Explain that pollen data is unavailable for the location, but provide general advice
+5. For each risk assessment, provide brief specific recommendations
+6. Avoid repeating information
+7. Format in markdown with clear, concise sections
 
-Remember that the primary value is in specific, personalized recommendations for managing allergies and conditions in the current environmental context, based on the precise weather, air quality, and pollen data provided. Use both colored circle emojis (🔴, 🟡, 🟢) in section headers AND colored text spans to clearly indicate risk levels. This dual visual system will help users quickly understand their personal health risks at a glance.`;
-
+Remember that the primary value is in specific, personalized recommendations for managing allergies and conditions in the current environmental context, based on the available weather, air quality, and pollen data provided. Use both colored circle emojis (🔴, 🟡, 🟢, ⚪) in section headers AND colored text spans to clearly indicate risk levels.`;
     console.log("Sending to GPT:", {
       profile: safeProfile,
       weather: weather,

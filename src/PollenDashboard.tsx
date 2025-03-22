@@ -1,6 +1,7 @@
-// src/PollenDashboard.tsx
+// Updated PollenDashboard.tsx
 import React from "react";
-import { Card, Col, Row, Statistic, Descriptions, Tag, Typography } from "antd";
+import { Card, Col, Row, Statistic, Descriptions, Tag, Typography, Alert, Space } from "antd";
+import { InfoCircleOutlined } from "@ant-design/icons";
 
 interface PollenProps {
   data: any;
@@ -8,7 +9,15 @@ interface PollenProps {
 
 const PollenDashboard: React.FC<PollenProps> = ({ data }) => {
   if (!data) {
-    return <div>No pollen data available</div>;
+    return (
+      <Alert
+        message="No Pollen Data Available"
+        description="Pollen data is unavailable for this location. Any pollen-related allergies will be marked as undefined risk level."
+        type="info"
+        showIcon
+        icon={<InfoCircleOutlined />}
+      />
+    );
   }
 
   console.log("Pollen data in component:", data);
@@ -20,7 +29,15 @@ const PollenDashboard: React.FC<PollenProps> = ({ data }) => {
   const dailyInfo = data.dailyInfo && data.dailyInfo.length > 0 ? data.dailyInfo[0] : null;
   
   if (!dailyInfo) {
-    return <div>No daily pollen data available</div>;
+    return (
+      <Alert
+        message="No Daily Pollen Data Available"
+        description="Detailed pollen data is unavailable for this location. Any pollen-related allergies will be marked as undefined risk level."
+        type="info"
+        showIcon
+        icon={<InfoCircleOutlined />}
+      />
+    );
   }
 
   // Format date
@@ -45,7 +62,18 @@ const PollenDashboard: React.FC<PollenProps> = ({ data }) => {
             </Typography.Paragraph>
 
             {pollenTypes.length === 0 ? (
-              <Typography.Paragraph>No pollen type information available for this location.</Typography.Paragraph>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Alert
+                  message="Limited Pollen Data"
+                  description="No specific pollen type information is available for this location. Any pollen-related allergies will be marked as undefined risk level."
+                  type="info"
+                  showIcon
+                />
+                <Typography.Paragraph>
+                  Even without specific pollen data, we've taken into account your allergies in our health recommendations. 
+                  Consider checking local weather services for more detailed pollen forecasts.
+                </Typography.Paragraph>
+              </Space>
             ) : (
               pollenTypes.map((pollenType: any) => {
                 if (!pollenType) return null;

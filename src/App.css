@@ -19,6 +19,27 @@
     --risk-low: green;
     
     background-color: var(--bg-primary);
+
+    /* Add a new class for undefined risk */
+.risk-undefined {
+  color: var(--risk-undefined);
+}
+
+/* Style for undefined risk tag */
+.ant-tag[color="gray"] {
+  background-color: #f0f0f0 !important;
+  color: var(--risk-undefined) !important;
+  border: none !important;
+}
+
+/* Style for undefined risk notice */
+.undefined-risk-notice {
+  background-color: rgba(136, 136, 136, 0.1);
+  border-left: 3px solid var(--risk-undefined);
+  padding: 8px 12px;
+  margin-bottom: 16px;
+  font-style: italic;
+}
   }
   
   .app-header {
@@ -149,3 +170,4 @@
 .ant-steps .ant-steps-item-icon .anticon {
   font-size: 22px;
 }
+
