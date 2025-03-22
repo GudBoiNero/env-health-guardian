@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Col, Row, Statistic, Descriptions, Tag } from "antd";
+import { Card, Col, Row, Statistic, Tag } from "antd";
 
 interface AirQualityProps {
   data: any;
@@ -61,9 +61,6 @@ const AirQualityDashboard: React.FC<AirQualityProps> = ({ data }) => {
     return "default";
   }
 
-  // Get pollutant data
-  let pollutants = data.pollutants || [];
-
   return (
     <div>
       <Row gutter={[16, 16]}>
@@ -90,37 +87,6 @@ const AirQualityDashboard: React.FC<AirQualityProps> = ({ data }) => {
             </Row>
           </Card>
         </Col>
-
-        {pollutants && pollutants.length > 0 ? (
-          <Col span={24}>
-            <Card title="Pollutants">
-              <Descriptions column={1}>
-                {pollutants.map((pollutant: any, index: number) => {
-                  const name = pollutant.fullName || pollutant.displayName || pollutant.code || `Pollutant ${index+1}`;
-                  const value = pollutant.concentration?.value;
-                  const units = pollutant.concentration?.units;
-                  
-                  // Format units for display
-                  let formattedUnits = units;
-                  if (units === "PARTS_PER_BILLION") formattedUnits = "ppb";
-                  if (units === "MICROGRAMS_PER_CUBIC_METER") formattedUnits = "μg/m³";
-                  
-                  return (
-                    <Descriptions.Item key={pollutant.code || index} label={name}>
-                      {value !== undefined ? `${value} ${formattedUnits}` : "N/A"}
-                    </Descriptions.Item>
-                  );
-                })}
-              </Descriptions>
-            </Card>
-          </Col>
-        ) : (
-          <Col span={24}>
-            <Card title="Pollutants">
-              <p>Detailed pollutant information is not available for this location.</p>
-            </Card>
-          </Col>
-        )}
       </Row>
     </div>
   );

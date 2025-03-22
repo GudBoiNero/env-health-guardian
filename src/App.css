@@ -1,3 +1,87 @@
 :root {
-    background-color: #f6f6f6;
-}
+    /* Main color scheme */
+    --crimson: #93032E;
+    --off-white: #E8F1F2;
+    --navy-black: #161925;
+    
+    /* Background colors */
+    --bg-primary: var(--off-white);
+    --bg-accent: var(--crimson);
+    --bg-secondary: var(--navy-black);
+    
+    /* Text colors */
+    --text-primary: #333333;
+    --text-light: #FFFFFF;
+    
+    /* Don't modify these risk colors - they're used for health indicators */
+    --risk-high: red;
+    --risk-medium: #E6B800;
+    --risk-low: green;
+    
+    background-color: var(--bg-primary);
+  }
+  
+  .app-header {
+    background-color: var(--bg-accent);
+    color: var(--text-light);
+    padding: 1.5rem;
+    border-radius: 20px;
+    margin-bottom: 2rem;
+  }
+  
+  .app-footer {
+    background-color: var(--bg-secondary);
+    color: var(--text-light);
+    padding: 1rem;
+    border-radius: 20px;
+    margin-top: 2rem;
+  }
+  
+  /* Override Ant Design card styles */
+  .ant-card {
+    border-radius: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  .ant-card-head {
+    border-bottom: 2px solid var(--bg-accent) !important;
+  }
+  
+  /* Primary button styling */
+  .ant-btn-primary {
+    background-color: var(--bg-accent) !important;
+    border-color: var(--bg-accent) !important;
+  }
+  
+  .ant-btn-primary:hover {
+    background-color: #7a0226 !important; /* Darker crimson */
+    border-color: #7a0226 !important;
+  }
+  
+  /* Tag styling - removing crimson outlines */
+  .ant-tag {
+    border: none !important;
+  }
+  
+  /* Ensure pollen dashboard tags don't have crimson outlines */
+  .ant-tag[color="gray"] {
+    background-color: #f0f0f0 !important;
+    color: #888888 !important;
+    border: none !important;
+  }
+  
+  /* Form labels */
+  .ant-form-item-label > label {
+    color: var(--bg-secondary) !important;
+    font-weight: 500;
+  }
+  
+  /* Custom class for accent text */
+  .accent-text {
+    color: var(--bg-accent);
+  }
+  
+  /* Custom class for secondary text */
+  .secondary-text {
+    color: var(--bg-secondary);
+  }

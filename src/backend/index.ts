@@ -1,3 +1,5 @@
+// Updated backend/index.ts with consistent location handling across all APIs
+
 import axios from "axios";
 
 export type UserProfile = {
@@ -5,6 +7,12 @@ export type UserProfile = {
     gender: string;
     conditions: string[];
     allergies: string[];
+    useCustomLocation?: boolean;
+    customLocation?: {
+        city: string;
+        state?: string;
+        country: string;
+    };
 };
 
 export async function getIP() {
@@ -16,9 +24,125 @@ export async function getIP() {
     }
 }
 
+/**
+ * Fetches the current location for the given ip address or uses custom location if provided
+ * @param customLocation Optional custom location data
+ * @returns a promise resolving to Location object
+ */
+export async function fetchLocation(customLocation?: { city: string; state?: string; country: string; }): Promise<any> {
+    try {
+        // If custom location provided, use it instead of IP lookup
+        if (customLocation && customLocation.city) {
+            console.log("Using custom location:", customLocation);
+            
+            // Format the query string for the API
+            let locationQuery = customLocation.city;
+            
+            // Add state if provided
+            if (customLocation.state && customLocation.state.trim() !== '') {
+                locationQuery += `,${customLocation.state}`;
+            }
+            
+            // Add country if provided
+            if (customLocation.country && customLocation.country.trim() !== '') {
+                locationQuery += `,${customLocation.country}`;
+            }
+            
+            // Fetch location data from weather API using city name
+            const response = await axios.get(
+                `https://api.weatherapi.com/v1/search.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${encodeURIComponent(locationQuery)}`
+            );
+            
+            // Check if we got any results
+            if (response.data && response.data.length > 0) {
+                // Use the first (best) match
+                const bestMatch = response.data[0];
+                return {
+                    name: bestMatch.name,
+                    region: bestMatch.region,
+                    country: bestMatch.country,
+                    lat: bestMatch.lat,
+                    lon: bestMatch.lon
+                };
+            } else {
+                throw new Error("Location not found. Please check the city, state, and country names.");
+            }
+        } else {
+            // Use IP-based location as before
+            const ip = (await getIP() as any).ip;
+            const response = await axios.get(
+                `https://api.weatherapi.com/v1/ip.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${ip}`
+            );
+            return response.data;
+        }
+    } catch (error) {
+        throw new Error("Error fetching location data: " + (error instanceof Error ? error.message : String(error)));
+    }
+}
 
-// Function to fetch pollen data from Google Maps Pollen API
-// To be added to src/backend/index.ts
+/**
+ * Fetches the current weather data for the given location.
+ * @param customLocation - Optional custom location provided by the user
+ * @returns A promise resolving to the weather data.
+ */
+export async function fetchWeatherData(customLocation?: { city: string; state?: string; country: string; }): Promise<any> {
+    try {
+        const location = await fetchLocation(customLocation);
+        const response = await axios.get(
+            `https://api.weatherapi.com/v1/current.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${location.lat},${location.lon}`
+        );
+        return response.data;
+    } catch (error) {
+        throw new Error("Error fetching weather data: " + (error instanceof Error ? error.message : String(error)));
+    }
+}
+
+/**
+ * Fetches air quality data for the given coordinates or location.
+ * @param lat - Latitude
+ * @param lon - Longitude
+ * @returns A promise resolving to the air quality data.
+ */
+export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
+  try {
+    const response = await axios({
+      method: 'post',
+      url: `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
+      data: {
+        universalAqi: true,
+        location: {
+          latitude: lat,
+          longitude: lon
+        },
+        extraComputations: [
+          "DOMINANT_POLLUTANT_CONCENTRATION",
+          "POLLUTANT_CONCENTRATION",
+          "LOCAL_AQI",
+          "POLLUTANT_ADDITIONAL_INFO"
+        ],
+        languageCode: "en"
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    console.log("Air quality API full response:", JSON.stringify(response.data, null, 2));
+    
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error("Air quality API error:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+    } else {
+      console.error("Unexpected error:", error);
+    }
+    throw new Error("Error fetching air quality data");
+  }
+}
 
 /**
  * Fetches pollen forecast data for a specific location.
@@ -61,93 +185,7 @@ export async function fetchPollenData(lat: number, lon: number, days: number = 1
     throw new Error("Error fetching pollen data");
   }
 }
-/**
- * Fetches the current location for the given ip address
- * @returns a promise resolving to Location object
- */
-export async function fetchLocation(): Promise<any> {
-    try {
-        const ip = (await getIP() as any).ip
-        const response = await axios.get(
-            `https://api.weatherapi.com/v1/ip.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${ip}`
-        )
-        return response.data
-    } catch (error) {
-        throw new Error("Error fetching location data")
-    }
-}
 
-/**
- * Fetches the current weather data for the given location.
- * @param location - The user's location.
- * @returns A promise resolving to the weather data.
- */
-export async function fetchWeatherData(): Promise<any> {
-    try {
-        const location = await fetchLocation()
-        const response = await axios.get(
-            `https://api.weatherapi.com/v1/current.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${location.lat},${location.lon}`
-        );
-        return response.data;
-    } catch (error) {
-        throw new Error("Error fetching weather data");
-    }
-}
-
-type EnvironmentAnalysisResult = {
-    weather: any;
-    airQuality: any;
-    pollen: any;  // Add this field
-    recommendations: string;
-  };
-
-  /**
- * Fetches air quality data for the given coordinates.
- * @param lat - Latitude
- * @param lon - Longitude
- * @returns A promise resolving to the air quality data.
- */
-  export async function fetchAirQualityData(lat: number, lon: number): Promise<any> {
-    try {
-      const response = await axios({
-        method: 'post',
-        url: `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`,
-        data: {
-          universalAqi: true,
-          location: {
-            latitude: lat,
-            longitude: lon
-          },
-          extraComputations: [
-            "DOMINANT_POLLUTANT_CONCENTRATION",
-            "POLLUTANT_CONCENTRATION",
-            "LOCAL_AQI",
-            "POLLUTANT_ADDITIONAL_INFO"
-          ],
-          languageCode: "en"
-        },
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log("Air quality API full response:", JSON.stringify(response.data, null, 2));
-      
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        console.error("Air quality API error:", {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status
-        });
-      } else {
-        console.error("Unexpected error:", error);
-      }
-      throw new Error("Error fetching air quality data");
-    }
-  }
-  // Update the analyzeEnvironment function in src/backend/index.ts
 export async function analyzeEnvironment(
   userProfile: UserProfile
 ): Promise<EnvironmentAnalysisResult> {
@@ -165,7 +203,13 @@ export async function analyzeEnvironment(
       conditions: Array.isArray(userProfile.conditions) ? userProfile.conditions.filter(c => c && c.trim() !== "") : []
     };
     
-    const weatherData = await fetchWeatherData();
+    // Get custom location if provided
+    const customLocation = userProfile.useCustomLocation && userProfile.customLocation 
+      ? userProfile.customLocation 
+      : undefined;
+    
+    // Fetch weather data with possible custom location
+    const weatherData = await fetchWeatherData(customLocation);
     const { lat, lon } = weatherData.location;
     
     // Fetch air quality data using the coordinates from weatherData
@@ -319,12 +363,20 @@ ${pollen.pollenTypes.map((p: any) => {
 FOCUS AREAS:
 1. Start with a brief, one-sentence acknowledgment of the user's allergies and conditions
 2. Provide a very brief environmental summary (1-2 sentences only)
-3. Focus primarily on risk assessments of the user's specific allergies and conditions given the current environment and judge each to be either high, medium, or low risk
-4. Prioritize specific recommendations over general information
+3. For each of the user's allergies and conditions, create a separate section with:
+   - A header in the format: "### 🟢/🟡/🔴 [Allergy/Condition Name]" using:
+     - 🔴 Red circle for high risk conditions
+     - 🟡 Yellow circle for medium risk conditions
+     - 🟢 Green circle for low risk conditions
+   - Classify the risk level using colored text:
+     - \`<span style="color:red">**High Risk**</span>\` 
+     - \`<span style="color:#E6B800">**Medium Risk**</span>\` 
+     - \`<span style="color:green">**Low Risk**</span>\`
+4. For each risk assessment, provide brief specific recommendations
 5. Avoid repeating information
-6. Format in markdown with clear, concise headings
+6. Format in markdown with clear, concise sections
 
-Remember that the primary value is in specific, personalized recommendations for managing allergies and conditions in the current environmental context, based on the precise weather, air quality, and pollen data provided.`;
+Remember that the primary value is in specific, personalized recommendations for managing allergies and conditions in the current environmental context, based on the precise weather, air quality, and pollen data provided. Use both colored circle emojis (🔴, 🟡, 🟢) in section headers AND colored text spans to clearly indicate risk levels. This dual visual system will help users quickly understand their personal health risks at a glance.`;
 
     console.log("Sending to GPT:", {
       profile: safeProfile,
@@ -369,3 +421,10 @@ Remember that the primary value is in specific, personalized recommendations for
     throw new Error(`Error analyzing environment: ${errorMessage}`);
   }
 }
+
+type EnvironmentAnalysisResult = {
+  weather: any;
+  airQuality: any;
+  pollen: any;
+  recommendations: string;
+};

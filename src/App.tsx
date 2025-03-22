@@ -1,4 +1,4 @@
-// Modified sections of App.tsx to include pollen data
+// Modified App.tsx with improved location data flow
 
 import './App.css'
 import './backend/index'
@@ -6,48 +6,58 @@ import './backend/index'
 import { useState } from 'react'
 import { 
   analyzeEnvironment, 
-  fetchWeatherData, 
-  fetchAirQualityData,
-  fetchPollenData,  // Add this import
   UserProfile 
 } from './backend/index'
-import { Button, Card, Form, FormProps, Input, Layout, Radio, Spin, Typography } from 'antd'
+import { Button, Card, Form, FormProps, Input, Layout, Radio, Spin, Typography, Alert } from 'antd'
 import DynamicTextAreaList from './DynamicTextAreaList'
+import LocationInput from './LocationInput'
 import WeatherDashboard from './WeatherDashboard'
-import Title from 'antd/es/typography/Title'
 import MarkdownParser from './MarkdownParser'
 import AirQualityDashboard from './AIrQualityDashboard'
-import PollenDashboard from './PollenDashboard'  // Add this import
+import PollenDashboard from './PollenDashboard'
+import HealthDisclaimerSection from './HealthDisclaimerSection'
 
 
 function App() {
   const [form] = Form.useForm();
-form.setFieldsValue({
-  age: '',
-  gender: '',
-  allergies: [''],  // Initialize as array with empty string
-  conditions: ['']  // Initialize as array with empty string
-});
+  form.setFieldsValue({
+    age: '',
+    gender: '',
+    allergies: [''],  // Initialize as array with empty string
+    conditions: [''],  // Initialize as array with empty string
+    useCustomLocation: false
+  });
   const [userProfile, setUserProfile] = useState<UserProfile>();
   const [weatherData, setWeatherData] = useState<any>();
   const [response, setResponse] = useState<any>();
   const [loading, setLoading] = useState<boolean>(false);
   const [state, setState] = useState<string | undefined>(undefined);
   const [airQualityData, setAirQualityData] = useState<any>();
-  const [pollenData, setPollenData] = useState<any>();  // Add this state variable
-
+  const [pollenData, setPollenData] = useState<any>();
+  const [error, setError] = useState<string | null>(null);
 
 // In App.tsx
 const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
-  console.log('Success:', values);
+  console.log('Form values:', values);
+  setError(null); // Clear any previous errors
 
   // Make sure values has the correct structure
   const formattedValues: UserProfile = {
     age: Number(values.age) || 0,
     gender: values.gender || "unknown",
     allergies: Array.isArray(values.allergies) ? values.allergies.filter(a => a && a.trim() !== "") : [],
-    conditions: Array.isArray(values.conditions) ? values.conditions.filter(c => c && c.trim() !== "") : []
+    conditions: Array.isArray(values.conditions) ? values.conditions.filter(c => c && c.trim() !== "") : [],
+    useCustomLocation: values.useCustomLocation || false,
   };
+
+  // Add custom location if provided
+  if (values.useCustomLocation && values.customLocation) {
+    formattedValues.customLocation = {
+      city: values.customLocation.city?.trim(),
+      state: values.customLocation.state?.trim(),
+      country: values.customLocation.country?.trim()
+    };
+  }
   
   setLoading(true);
   setState('Getting weather data...');
@@ -55,44 +65,24 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
   // Set the user profile
   setUserProfile(formattedValues);
   
-  // Instead of relying on the state update, pass formattedValues directly
-  fetchWeatherData().then(data => {
-    console.log('Weather data:', data);
-    setState('Getting air quality data...');
-    setWeatherData(data);
-    return data.location;
-  }).then(location => {
-    return fetchAirQualityData(location.lat, location.lon).then(airQualityData => {
-      console.log('Air quality data:', airQualityData);
-      setState('Getting pollen data...');
-      setAirQualityData(airQualityData);
-      return location;
+  // Pass the complete user profile with custom location to analyzeEnvironment
+  // This ensures all APIs use the same location coordinates consistently
+  analyzeEnvironment(formattedValues)
+    .then(data => {
+      console.log('Response:', data);
+      // Set all the state data from the response
+      setWeatherData(data.weather);
+      setAirQualityData(data.airQuality);
+      setPollenData(data.pollen);
+      setResponse(data);
+      setState(undefined);
+      setLoading(false);
+    }).catch(error => {
+      console.error('Error:', error);
+      setError(error.message || "An unexpected error occurred");
+      setState(undefined);
+      setLoading(false);
     });
-  })
-  .then(location => {
-    return fetchPollenData(location.lat, location.lon, 1).then(pollenData => {
-      console.log('Pollen data:', pollenData);
-      setState('Generating response...');
-      setPollenData(pollenData);
-      
-      // Use the formattedValues directly instead of userProfile!
-      return formattedValues;
-    });
-  })
-  .then(profile => {
-    // Pass the profile directly instead of relying on userProfile state
-    return analyzeEnvironment(profile);
-  })
-  .then(data => {
-    console.log('Response:', data);
-    setState(undefined);
-    setResponse(data);
-    setLoading(false);
-  }).catch(error => {
-    console.error('Error:', error);
-    setState('Error: ' + error.message);
-    setLoading(false);
-  });
 };
 
   const onFinishFailed: FormProps<UserProfile>['onFinishFailed'] = (errorInfo) => {
@@ -101,14 +91,33 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
 
   return (
     <>
-      <Layout style={layoutStyle}>
-        <Card style={contentStyle}>
-          <Title level={2} style={{ marginTop: 0 }}>Environment Health Guardian</Title>
-          <Typography>Welcome! Please input health-risk assessment data below! Don't worry, your data is safe.</Typography>
-        </Card>
+      {/* App Header with crimson background */}
+      <Layout style={layoutStyle} className="app-header">
+        <Typography.Title level={2} style={{ marginTop: 0, color: 'white' }}>Environment Health Guardian</Typography.Title>
+        <Typography.Text style={{ color: 'white' }}>
+          Monitor and manage your environmental health based on personalized risk assessments
+        </Typography.Text>
       </Layout>
+      
       <Layout style={layoutStyle}>
         <Card style={contentStyle}>
+          <Typography.Title level={4} className="secondary-text">Personal Health Profile</Typography.Title>
+          <Typography.Paragraph>
+            Please input your health information below to receive a personalized environmental health assessment.
+          </Typography.Paragraph>
+          
+          {error && (
+            <Alert
+              message="Error"
+              description={error}
+              type="error"
+              showIcon
+              closable
+              style={{ marginBottom: '16px' }}
+              onClose={() => setError(null)}
+            />
+          )}
+          
           <Form
             form={form}
             name='form'
@@ -136,9 +145,12 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
             <Form.Item label='Conditions' name='conditions'>
               <DynamicTextAreaList value={userProfile?.conditions} />
             </Form.Item>
+            
+            {/* Location Input Component */}
+            <LocationInput form={form} />
 
             <Form.Item>
-              <Button type='primary' htmlType='submit' loading={loading}>Submit</Button>
+              <Button type='primary' htmlType='submit' loading={loading}>Generate Assessment</Button>
             </Form.Item>
           </Form>
         </Card>
@@ -180,7 +192,6 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
             :
             <Layout style={layoutStyle}>
               <Card style={contentStyle}>
-                <Typography.Title level={3}>Recommendations</Typography.Title>
                 <MarkdownParser value={response?.recommendations} />
               </Card>
             </Layout>
@@ -195,6 +206,11 @@ const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {
             </Card>
           </Layout>
         </>}
+        
+      {/* Health Disclaimer */}
+      <Layout style={layoutStyle}>
+        <HealthDisclaimerSection />
+      </Layout>
     </>
   )
 }

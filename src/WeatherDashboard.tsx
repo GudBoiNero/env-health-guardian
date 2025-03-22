@@ -55,7 +55,6 @@ const WeatherDashboard: React.FC<WeatherProps> = ({ data }) => {
             temp_f,
             condition,
             wind_mph,
-            wind_dir,
             pressure_mb,
             humidity,
             feelslike_c,
