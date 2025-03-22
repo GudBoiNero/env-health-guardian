@@ -2,8 +2,7 @@
 
 import './App.css'
 import './backend/index'
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   analyzeEnvironment, 
   UserProfile 
@@ -18,15 +17,9 @@ import PollenDashboard from './PollenDashboard'
 import HealthDisclaimerSection from './HealthDisclaimerSection'
 
 
+
 function App() {
   const [form] = Form.useForm();
-  form.setFieldsValue({
-    age: '',
-    gender: '',
-    allergies: [''],  // Initialize as array with empty string
-    conditions: [''],  // Initialize as array with empty string
-    useCustomLocation: false
-  });
   const [userProfile, setUserProfile] = useState<UserProfile>();
   const [weatherData, setWeatherData] = useState<any>();
   const [response, setResponse] = useState<any>();
@@ -35,6 +28,18 @@ function App() {
   const [airQualityData, setAirQualityData] = useState<any>();
   const [pollenData, setPollenData] = useState<any>();
   const [error, setError] = useState<string | null>(null);
+
+  // Use useEffect for initialization instead of direct calls during render
+  useEffect(() => {
+    // Set initial form values
+    form.setFieldsValue({
+      age: '',
+      gender: '',
+      allergies: [''],
+      conditions: [''],
+      useCustomLocation: false
+    });
+  }, [form]); // Only run on initial mount and if form changes
 
 // In App.tsx
 const onFinish: FormProps<UserProfile>['onFinish'] = (values) => {

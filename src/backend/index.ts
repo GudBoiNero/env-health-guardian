@@ -65,6 +65,7 @@ export async function fetchLocation(customLocation?: { city: string; state?: str
                     lon: bestMatch.lon
                 };
             } else {
+                console.log("Location not found. Please check the city, state, and country names.")
                 throw new Error("Location not found. Please check the city, state, and country names.");
             }
         } else {
